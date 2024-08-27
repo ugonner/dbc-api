@@ -25,6 +25,7 @@ export class CreateProducerDTO{
     kind: MediaSoup.types.MediaKind;
     transportId: string;
     room: string;
+    mediaKnd: "audio" | "video"
 }
 
 export class CreateConsumerDTO {
@@ -38,3 +39,13 @@ export class ProducingDTO{
     producerId: string;
     userId: string;
 }
+
+export class PublishProducerDTO{
+    producerId: string;
+    userId: string;
+    room: string;
+    socketId?: string;
+    
+}
+
+

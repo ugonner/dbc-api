@@ -5,11 +5,18 @@ export enum ClientEvents {
     CONNECT_TRANSPORT = "connect_tranport",
     PRODUCE = "produce",
     CONSUME = "consume",
-    GET_ROOM_PRODUCERS = "get_room_producers"
+    GET_ROOM_PRODUCERS = "get_room_producers",
+    REQUEST_TO_JOIN = "requestToJoin",
+    REQUEST_TO_PUBLISH = "requestToPublish",
+    PUBLISH_PRODUCER = "publishProducer"
+
 }
 
 export enum ServerEvents {
     PRODUCER_PRODUCING = "producing",
     PRODUCER_PAUSED = "producer_paused",
-    PRODUCER_CLOSED = "producer_closed"
+    PRODUCER_CLOSED = "producer_closed",
+    PUBLISH_PRODUCER = "publishProducer",
+    REQUEST_TO_PUBLISH = "requestToPublish",
+    REQUEST_TO_JOIN = "requestToJoin"
 }

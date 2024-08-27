@@ -1,6 +1,7 @@
 import MediaSoup from "mediasoup";
 export interface IUserConnectionDetail {
   userId?: string;
+  socketId?: string;
   room?: string;
   producerTransport?: MediaSoup.types.Transport;
   consumerTransport?: MediaSoup.types.Transport;
@@ -10,6 +11,9 @@ export interface IUserConnectionDetail {
   consumerId?: string;
   producer?: MediaSoup.types.Producer;
   consumer?: MediaSoup.types.Consumer;
+  isAdmin?: boolean;
+  isPublishing?: boolean;
+  isOwner?: boolean;
 }
 
 export interface ISocketUser {

@@ -16,6 +16,7 @@ import {
   getRouterRTCCapabilitiesDTO,
   JoinRoomDTO,
   ProducingDTO,
+  PublishProducerDTO,
 } from '../shared/dtos/requests/signals';
 import { CodecCapabilities } from '../shared/DATASETS/codec-capabilities';
 import { EventUtility } from './event-utility';
@@ -30,10 +31,12 @@ import {
   IProducersDTO,
 } from '../shared/dtos/responses/signals';
 import { IRouterProps } from '../shared/interfaces/router';
-import { UseFilters, UseInterceptors } from '@nestjs/common';
+import { forwardRef, Inject, Injectable, UseFilters, UseInterceptors } from '@nestjs/common';
 import { ResponseInterceptor } from '../shared/interceptors/response.interceptor';
 import { ApiResponse, IApiResponse } from '../shared/helpers/apiresponse';
 import { EventExceptionHandler } from '../shared/interceptors/exception.filter';
+import { error } from 'console';
+import { RoomService } from './room.service';
 
 @UseFilters(EventExceptionHandler)
 @UseInterceptors(ResponseInterceptor)
@@ -43,16 +46,24 @@ import { EventExceptionHandler } from '../shared/interceptors/exception.filter';
     origin: '*',
   },
 })
+@Injectable()
 export class CallGateway
   implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
 {
   @WebSocketServer()
-  server: Server;
+  private server: Server;
+  getServer(): Server { return this.server}
 
   private roomsUsers: { [room: string]: ISocketUser } = {};
 
   private worker: MediaSoup.types.Worker;
   private roomRouters: { [room: string]: IRouterProps } = {};
+
+  public getRoomUsers(): { [room: string]: ISocketUser } { return this.roomsUsers};
+
+  constructor(
+    @Inject(forwardRef(() => RoomService))
+    private roomService: RoomService){}
 
   async afterInit() {
     this.worker = await createWorker();
@@ -83,8 +94,7 @@ export class CallGateway
   async joinRoom(client: Socket, payload: JoinRoomDTO) {
     const { room, userId } = payload;
     const socketId: string = client.id;
-
-    if (!this.roomRouters[room] || !this.roomRouters[room].router) {
+    if (!this.roomRouters[room] || !this.roomRouters[room]?.router) {
       const router = await this.worker.createRouter({
         mediaCodecs: CodecCapabilities,
       });
@@ -97,9 +107,12 @@ export class CallGateway
         room,
       );
     }
-    this.updateRoomSocketUser(room, socketId, { userId, room });
+    
+    const dbRoom = await this.roomService.getRoom(room);
+    const isOwner = dbRoom?.owner?.userId === userId;
+    this.updateRoomSocketUser(room, socketId, { userId, room, socketId, isOwner, isAdmin: isOwner });
     client.join(room);
-    console.log('joined room');
+    console.log('joined room AS ADMIN:', isOwner);
     return payload;
   }
 
@@ -108,6 +121,7 @@ export class CallGateway
     client: Socket,
     payload: getRouterRTCCapabilitiesDTO,
   ): Promise<IApiResponse<MediaSoup.types.RtpCapabilities>> {
+    
     const res = this.roomRouters[payload.room].router.rtpCapabilities;
     return ApiResponse.success(
       'Router RTPcAPABILITIES  OBTAINED SUCCESSFULLY',
@@ -258,6 +272,40 @@ export class CallGateway
       producers,
     );
   }
+
+  @SubscribeMessage(ClientEvents.REQUEST_TO_PUBLISH)
+  async requestToPublish(client: Socket, payload: PublishProducerDTO): Promise<IApiResponse<PublishProducerDTO>>{
+    try{
+      const {producerId, userId, room} = payload;
+      const socketId = client.id;
+      if(!this.roomsUsers[room] || Object.keys(this.roomsUsers[room]).length === 0) return ApiResponse.fail("Room is empty or does not exist", payload);
+
+      const roomAdmin = Object.values(this.roomsUsers[room]).find((socketDetail: IUserConnectionDetail) => socketDetail.isAdmin);
+      client.to(roomAdmin.socketId).emit(ClientEvents.REQUEST_TO_PUBLISH, payload);
+      return ApiResponse.success("Request to publish successful", payload);
+
+    }catch(errror){
+      return ApiResponse.fail((error as any).message, error as unknown as PublishProducerDTO)
+    }
+  }
+  
+  @SubscribeMessage(ClientEvents.PUBLISH_PRODUCER)
+  async publishProducer(client: Socket, payload: PublishProducerDTO): Promise<IApiResponse<PublishProducerDTO>>{
+    try{
+      const {socketId, room} = payload;
+      if(!this.roomsUsers[room] || Object.keys(this.roomsUsers[room]).length === 0) return ApiResponse.fail("Room is empty or does not exist", payload);
+
+      if(!this.roomsUsers[room][socketId]) return ApiResponse.fail("Producer'S User conection Details does not exist in this room", payload);
+
+      this.roomsUsers[room][socketId].isPublishing = true;
+      this.server.to(room).emit(ServerEvents.PRODUCER_PRODUCING, payload);
+      return ApiResponse.success("Producer published successfully", payload);
+
+    }catch(errror){
+      return ApiResponse.fail((error as any).message, error as unknown as PublishProducerDTO)
+    }
+  }
+  
 
   private updateRoomSocketUser(
     room: string,

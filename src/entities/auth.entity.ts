@@ -1,0 +1,77 @@
+import {
+  PrimaryGeneratedColumn,
+  Column,
+  Index,
+  BeforeInsert,
+  CreateDateColumn,
+  UpdateDateColumn,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  OneToOne,
+} from 'typeorm';
+import * as bcrypt from 'bcryptjs';
+import { Role } from './role.entity';
+import { AuthStatus, UserType } from '../shared/enums/auth.enum';
+import { Profile } from './user.entity';
+
+@Entity()
+export class Auth {
+  @PrimaryGeneratedColumn()
+  id: number;
+
+  @Column({ unique: true })
+  email: string;
+
+  @Column()
+  password: string;
+
+  @Column({default: UserType.GUEST})
+  userType: UserType;
+
+  @Column({default: AuthStatus.INACTIVE})
+  status: AuthStatus;
+
+  @Column()
+  @Index({ unique: true })
+  userId: string;
+
+  @Column({ nullable: true })
+  otp: number;
+
+  @Column({ nullable: true })
+  otpTime: Date;
+
+  @Column('boolean', { default: false })
+  isVerified: boolean;
+
+  @ManyToOne(() => Role)
+  @JoinColumn()
+  role: Role;
+
+  @OneToOne(() => Profile, (profile) => profile.account, {
+    cascade: true,
+    onDelete: 'CASCADE',
+  })
+  @JoinColumn()
+  profile: Profile;
+
+
+  @CreateDateColumn() createdAt!: Date;
+
+  @UpdateDateColumn() updatedAt!: Date;
+
+  @BeforeInsert()
+  formatEmail() {
+    this.email = this.email.toLowerCase();
+  }
+
+  @BeforeInsert()
+  async hashPassword() {
+    this.password = await bcrypt.hash(this.password, 10);
+  }
+  toAuthData() {
+    const { id, userId, email, status, role, isVerified } = this;
+    return { id, userId, email, status, role, isVerified };
+  }
+}
