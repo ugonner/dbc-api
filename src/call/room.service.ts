@@ -14,7 +14,7 @@ import { DBUtils } from '../shared/helpers/db';
 import { Profile } from '../entities/user.entity';
 import { CallGateway } from './call.gateway';
 import { ISocketUser, IUserConnectionDetail } from '../shared/interfaces/socket-user';
-import { ClientEvents } from '../shared/enums/events.enum';
+import { BroadcastEvents, ClientEvents } from '../shared/enums/events.enum';
 import { Auth } from '../entities/auth.entity';
 import { IApiResponse } from '../shared/helpers/apiresponse';
 
@@ -196,7 +196,7 @@ export class RoomService {
     const user = await this.getUserByUniqueId(userId);
 
     const adminRes: IApiResponse<boolean> = await new Promise((resolve) => {
-      this.callGateway.getServer().to(adminSocket.socketId).emit(ClientEvents.REQUEST_TO_JOIN, {userId, ...(user || {})}, resolve);
+      this.callGateway.getServer().to(adminSocket.socketId).emit(BroadcastEvents.REQUEST_TO_JOIN, {userId, ...(user || {})}, resolve);
   })
 
   console.log("admin socket", adminSocket.socketId);

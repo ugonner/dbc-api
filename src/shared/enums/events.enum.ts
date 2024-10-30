@@ -6,17 +6,16 @@ export enum ClientEvents {
     PRODUCE = "produce",
     CONSUME = "consume",
     GET_ROOM_PRODUCERS = "get_room_producers",
-    REQUEST_TO_JOIN = "requestToJoin",
-    REQUEST_TO_PUBLISH = "requestToPublish",
-    PUBLISH_PRODUCER = "publishProducer"
-
+    GET_ROOM_ADMINS = "get_room_admins",
 }
 
-export enum ServerEvents {
+export enum BroadcastEvents {
     PRODUCER_PRODUCING = "producing",
     PRODUCER_PAUSED = "producer_paused",
     PRODUCER_CLOSED = "producer_closed",
     PUBLISH_PRODUCER = "publishProducer",
     REQUEST_TO_PUBLISH = "requestToPublish",
-    REQUEST_TO_JOIN = "requestToJoin"
+    REQUEST_TO_JOIN = "requestToJoin",
+    TOGGLE_PRODUCER_STATE = "toggleProducerState",
+    JOIN_REQUEST_ACCEPTED = "join_request_accepted"
 }

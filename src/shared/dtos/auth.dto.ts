@@ -4,14 +4,23 @@ import {
     IsNotEmpty,
     IsNumber,
     IsOptional,
+    IsPhoneNumber,
     Length,
   } from 'class-validator';
   
   export class AuthDTO {
   
-    @ApiProperty()
+    @ApiPropertyOptional()
     @IsEmail({}, { message: 'Please enter a valid email address' })
+    @IsOptional()
     email: string;
+
+    @ApiPropertyOptional()
+    @Length(11, 16)
+    @IsPhoneNumber()
+    @IsOptional()
+    phoneNumber?: string;
+  
   
     @ApiProperty()
     @Length(8, 20, { message: 'Password must be between 8 and 20 characters' })
@@ -30,7 +39,13 @@ import {
     @ApiPropertyOptional()
     @IsEmail({}, { message: 'Please enter a valid email address' })
     @IsOptional()
-    email: string;
+    email?: string;
+
+    @ApiPropertyOptional()
+    @Length(11, 16)
+    @IsPhoneNumber()
+    @IsOptional()
+    phoneNumber?: string;
   
     @ApiPropertyOptional()
     @Length(8, 20, { message: 'Password must be between 8 and 20 characters' })

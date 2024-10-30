@@ -37,18 +37,23 @@ export class AuthService {
 
   async createAccount(dto: UserProfileDTO): Promise<Auth> {
     let newAuth: Auth;
+    let errorData: unknown;
     const queryRunner: QueryRunner = this.dataSource.createQueryRunner();
     await queryRunner.startTransaction();
     try {
       await this.validateDto(dto);
       const { email, firstName, lastName, gender, ...rest } = dto;
 
-      const userExist = await queryRunner.manager.findOneBy(Auth, { email });
-      if (userExist) throw new BadRequestException('Email already exists');
+      const userExist = await queryRunner.manager.findOneBy(Auth, [
+        {email},
+        {phoneNumber: dto.phoneNumber}
+      ]);
+      if (userExist) throw new BadRequestException('Email already / Phone number exists');
 
       const payload: Partial<Auth> = {
         email: email.toLowerCase(),
         ...rest,
+        isVerified: true // TODO: Remove
       };
       payload.otpTime = new Date();
       payload.userId = await DBUtils.generateUniqueID(
@@ -94,8 +99,9 @@ export class AuthService {
       newAuth = auth;
     } catch (error) {
       await DBUtils.handleFailedQueryRunner(queryRunner, error as Error);
-      throw new InternalServerErrorException(error.message);
+      errorData = error;
     } finally {
+      if(errorData) throw errorData;
       return newAuth;
     }
   }
@@ -108,7 +114,13 @@ export class AuthService {
   }
 
   async login(dto: AuthDTO, values: { userAgent: string; ipAddress: string }) {
-    const user = await this.authRepository.findOneBy({ email: dto.email });
+    const user = await this.authRepository.findOne({
+      where: [
+        { email: dto.email },
+        { phoneNumber: dto.phoneNumber}
+      ],
+      relations: ["profile"]
+    });
     if (!user) throw new NotFoundException('Invalid credentials');
 
     if (!user.isVerified) throw new BadRequestException('Account not verified');
@@ -139,7 +151,7 @@ export class AuthService {
         },
         {
           secret: process.env.JWT_ACCESS_SECRET,
-          expiresIn: process.env.JWT_ACCESS_EXPIRATION,
+          expiresIn: process.env.JWT_ACCESS_TOKEN_EXPIRATION,
         },
       ),
       this.jwtService.signAsync(

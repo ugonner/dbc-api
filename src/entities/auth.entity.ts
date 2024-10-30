@@ -20,8 +20,11 @@ export class Auth {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ unique: true })
+  @Column({ nullable: true })
   email: string;
+
+  @Column({nullable: true})
+  phoneNumber: string;
 
   @Column()
   password: string;

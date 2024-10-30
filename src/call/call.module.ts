@@ -15,7 +15,7 @@ import { Auth } from '../entities/auth.entity';
     {
       provide: "CALL_GATEWWAY",
       useClass: CallGateway
-    }, 
+    },
     RoomService]
 })
 export class CallModule {}

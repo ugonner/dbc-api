@@ -25,7 +25,9 @@ export class CreateProducerDTO{
     kind: MediaSoup.types.MediaKind;
     transportId: string;
     room: string;
-    mediaKnd: "audio" | "video"
+    mediaKind: "audio" | "video";
+    isAudioTurnedOff: boolean;
+    isVideoTurnedOff: boolean;
 }
 
 export class CreateConsumerDTO {

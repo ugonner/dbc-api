@@ -7,15 +7,29 @@ export interface IUserConnectionDetail {
   consumerTransport?: MediaSoup.types.Transport;
   producerTransportId?: string;
   consumerTransportId?: string;
-  producerId?: string;
   consumerId?: string;
-  producer?: MediaSoup.types.Producer;
+  videoProducerId?: string;
+  audioProducerId?: string;
+  videoProducer?: MediaSoup.types.Producer;
+  audiooProducer?: MediaSoup.types.Producer;
   consumer?: MediaSoup.types.Consumer;
   isAdmin?: boolean;
   isPublishing?: boolean;
   isOwner?: boolean;
+  isVideoTurnedOff?: boolean,
+  isAudioTurnedOff?: boolean,
 }
 
 export interface ISocketUser {
   [socketId: string]: IUserConnectionDetail
+}
+export interface IProducerUser {
+  userId?: string;
+  videoProducerId: string;
+  audioProducerId: string;
+  socketId: string;
+  isAudioTurnedOff: boolean;
+  isVideoTurnedOff: boolean;
+  userName?: string;
+  mediaStream?: MediaStream;
 }

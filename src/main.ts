@@ -13,6 +13,7 @@ async function bootstrap() {
     }),
   );
   app.enableCors({ origin: '*' });
+  //app.useGlobalFilters(new AllExceptionFilter())
   OpenAPIConfiguration.configureSwagger(app);
   
 const port = process.env.PORT || 8000;

@@ -24,14 +24,22 @@ import {
   ISocketUser,
   IUserConnectionDetail,
 } from '../shared/interfaces/socket-user';
-import { ClientEvents, ServerEvents } from '../shared/enums/events.enum';
+import { ClientEvents, BroadcastEvents } from '../shared/enums/events.enum';
 import {
   CreatedConsumerDTO,
   CreatedTransportDTO,
   IProducersDTO,
+  IProducerUser,
+  ToggleProducerStateDTO,
 } from '../shared/dtos/responses/signals';
 import { IRouterProps } from '../shared/interfaces/router';
-import { forwardRef, Inject, Injectable, UseFilters, UseInterceptors } from '@nestjs/common';
+import {
+  forwardRef,
+  Inject,
+  Injectable,
+  UseFilters,
+  UseInterceptors,
+} from '@nestjs/common';
 import { ResponseInterceptor } from '../shared/interceptors/response.interceptor';
 import { ApiResponse, IApiResponse } from '../shared/helpers/apiresponse';
 import { EventExceptionHandler } from '../shared/interceptors/exception.filter';
@@ -52,18 +60,23 @@ export class CallGateway
 {
   @WebSocketServer()
   private server: Server;
-  getServer(): Server { return this.server}
+  getServer(): Server {
+    return this.server;
+  }
 
   private roomsUsers: { [room: string]: ISocketUser } = {};
 
   private worker: MediaSoup.types.Worker;
   private roomRouters: { [room: string]: IRouterProps } = {};
 
-  public getRoomUsers(): { [room: string]: ISocketUser } { return this.roomsUsers};
+  public getRoomUsers(): { [room: string]: ISocketUser } {
+    return this.roomsUsers;
+  }
 
   constructor(
     @Inject(forwardRef(() => RoomService))
-    private roomService: RoomService){}
+    private roomService: RoomService,
+  ) {}
 
   async afterInit() {
     this.worker = await createWorker();
@@ -82,10 +95,10 @@ export class CallGateway
 
   handleDisconnect(client: Socket) {
     this.notifyAndDeleteClosedProducers(client);
-    delete this.roomsUsers[client.id];
+    if(this.roomsUsers) delete this.roomsUsers[client.id];
   }
 
-  @SubscribeMessage(ServerEvents.PRODUCER_CLOSED)
+  @SubscribeMessage(BroadcastEvents.PRODUCER_CLOSED)
   handleClosedProducer(client: Socket) {
     this.notifyAndDeleteClosedProducers(client);
   }
@@ -107,10 +120,16 @@ export class CallGateway
         room,
       );
     }
-    
+
     const dbRoom = await this.roomService.getRoom(room);
     const isOwner = dbRoom?.owner?.userId === userId;
-    this.updateRoomSocketUser(room, socketId, { userId, room, socketId, isOwner, isAdmin: isOwner });
+    this.updateRoomSocketUser(room, socketId, {
+      userId,
+      room,
+      socketId,
+      isOwner,
+      isAdmin: isOwner,
+    });
     client.join(room);
     console.log('joined room AS ADMIN:', isOwner);
     return payload;
@@ -121,7 +140,6 @@ export class CallGateway
     client: Socket,
     payload: getRouterRTCCapabilitiesDTO,
   ): Promise<IApiResponse<MediaSoup.types.RtpCapabilities>> {
-    
     const res = this.roomRouters[payload.room].router.rtpCapabilities;
     return ApiResponse.success(
       'Router RTPcAPABILITIES  OBTAINED SUCCESSFULLY',
@@ -187,19 +205,35 @@ export class CallGateway
     dto: CreateProducerDTO,
   ): Promise<IApiResponse<{ id: string }>> {
     const { room, rtpParameters, kind } = dto;
-    const { producerTransport, userId } = this.getSocketConnectiondATA(
+    const { producerTransport, userId, isVideoTurnedOff, isAudioTurnedOff } = this.getSocketConnectiondATA(
       client.id,
       room,
     );
     if (producerTransport) {
       const producer = await producerTransport.produce({ kind, rtpParameters });
-      this.updateRoomSocketUser(room, client.id, {
-        producer,
-        producerId: producer.id,
-      });
+      let socketUserPayload: IUserConnectionDetail = {};
+      socketUserPayload.isVideoTurnedOff = dto.isVideoTurnedOff;
+      socketUserPayload.isAudioTurnedOff = dto.isAudioTurnedOff;
+      if (/audio/i.test(dto.mediaKind)) {
+        socketUserPayload = {
+          ...socketUserPayload,
+          audiooProducer: producer,
+          audioProducerId: producer.id,
+          isAudioTurnedOff: false
+        };
+      } else if (/video/i.test(dto.mediaKind)) {
+        socketUserPayload = {
+          ...socketUserPayload,
+          videoProducer: producer,
+          videoProducerId: producer.id,
+          isVideoTurnedOff: false
+        };
+      }
+      this.updateRoomSocketUser(room, client.id, socketUserPayload);
 
-      const producingDto: ProducingDTO = { producerId: producer.id, userId };
-      client.to(room).emit(ServerEvents.PRODUCER_PRODUCING, producingDto);
+      const producerDto: IProducerUser = this.getProducerDTOFromSocket(client.id, room);
+
+      client.to(room).emit(BroadcastEvents.PRODUCER_PRODUCING, producerDto);
       return ApiResponse.success(
         'producer created successfully',
         { id: producer.id },
@@ -264,48 +298,117 @@ export class CallGateway
     const socketUsers: IUserConnectionDetail[] = Object.values(roomSockets);
     const producers: IProducersDTO = {};
     socketUsers.forEach((socketUser) => {
-      const { producerId, userId } = socketUser;
-      if (producerId) producers[producerId] = { producerId, userId };
+      const { socketId, videoProducerId, audioProducerId, userId, isVideoTurnedOff, isAudioTurnedOff } = socketUser;
+      const producerId = videoProducerId || audioProducerId;
+      if (producerId && client.id !== socketId) {
+        producers[socketId] = { videoProducerId, audioProducerId, userId, socketId, isVideoTurnedOff, isAudioTurnedOff };
+      }
     });
     return ApiResponse.success(
       'Room producers fetched successfully',
       producers,
     );
   }
+  
 
-  @SubscribeMessage(ClientEvents.REQUEST_TO_PUBLISH)
-  async requestToPublish(client: Socket, payload: PublishProducerDTO): Promise<IApiResponse<PublishProducerDTO>>{
-    try{
-      const {producerId, userId, room} = payload;
-      const socketId = client.id;
-      if(!this.roomsUsers[room] || Object.keys(this.roomsUsers[room]).length === 0) return ApiResponse.fail("Room is empty or does not exist", payload);
-
-      const roomAdmin = Object.values(this.roomsUsers[room]).find((socketDetail: IUserConnectionDetail) => socketDetail.isAdmin);
-      client.to(roomAdmin.socketId).emit(ClientEvents.REQUEST_TO_PUBLISH, payload);
-      return ApiResponse.success("Request to publish successful", payload);
-
-    }catch(errror){
-      return ApiResponse.fail((error as any).message, error as unknown as PublishProducerDTO)
+  @SubscribeMessage(ClientEvents.GET_ROOM_ADMINS)
+  async getRoomAdmins(
+    client: Socket,
+    payload: { room: string },
+  ): Promise<IApiResponse<IProducersDTO>> {
+    const roomSockets = this.roomsUsers[payload.room];
+    if(!roomSockets){
+      const room = await this.roomService.getRoom(payload.room);
+      const roomAdmin = {[client.id]: {userId: room.owner?.userId}} as unknown as IProducersDTO
+      return ApiResponse.success("admins fetched", roomAdmin);
     }
+    const socketUsers: IUserConnectionDetail[] = Object.values(roomSockets);
+    const producers: IProducersDTO = {};
+    socketUsers.forEach((socketUser) => {
+      const { socketId, videoProducerId, audioProducerId, userId, isVideoTurnedOff, isAudioTurnedOff, isAdmin } = socketUser;
+      if (isAdmin) {
+        producers[socketId] = { videoProducerId, audioProducerId, userId, socketId, isVideoTurnedOff, isAudioTurnedOff };
+      }
+    });
+    return ApiResponse.success(
+      'Room admins fetched successfully',
+      producers,
+    );
   }
   
-  @SubscribeMessage(ClientEvents.PUBLISH_PRODUCER)
-  async publishProducer(client: Socket, payload: PublishProducerDTO): Promise<IApiResponse<PublishProducerDTO>>{
-    try{
-      const {socketId, room} = payload;
-      if(!this.roomsUsers[room] || Object.keys(this.roomsUsers[room]).length === 0) return ApiResponse.fail("Room is empty or does not exist", payload);
 
-      if(!this.roomsUsers[room][socketId]) return ApiResponse.fail("Producer'S User conection Details does not exist in this room", payload);
+  @SubscribeMessage(BroadcastEvents.REQUEST_TO_JOIN)
+  async requestTojOIN(
+    client: Socket,
+    payload: {room: string;},
+  ): Promise<IApiResponse<boolean>> {
+    try {
+      const { room } = payload;
+      const roomAdmins = await (await this.getRoomAdmins(client, {room})).data;
+      //-- If no admin is connected ie no socketId throw;
+      const availableAdmin = Object.values(roomAdmins)[0];
+      if(!availableAdmin.socketId) return ApiResponse.fail("No admin is connected yet", false);
 
-      this.roomsUsers[room][socketId].isPublishing = true;
-      this.server.to(room).emit(ServerEvents.PRODUCER_PRODUCING, payload);
-      return ApiResponse.success("Producer published successfully", payload);
-
-    }catch(errror){
-      return ApiResponse.fail((error as any).message, error as unknown as PublishProducerDTO)
+      
+      this.server
+        .to(availableAdmin.socketId)
+        .emit(BroadcastEvents.REQUEST_TO_JOIN, {room, socketId: client.id, ...payload});
+      return ApiResponse.success('Request to publish successful', true);
+    } catch (errror) {
+      return ApiResponse.fail(
+        (error as any).message,
+        false,
+      );
     }
   }
-  
+
+  @SubscribeMessage(BroadcastEvents.JOIN_REQUEST_ACCEPTED)
+  async acceptJoinRequest(
+    client: Socket,
+    payload: PublishProducerDTO,
+  ): Promise<IApiResponse<PublishProducerDTO>> {
+    try {
+      console.log("fired accepted")
+      const { socketId, room } = payload;
+     
+      client.to(socketId).emit(BroadcastEvents.JOIN_REQUEST_ACCEPTED, payload);
+      return ApiResponse.success('Producer published successfully', payload);
+    } catch (errror) {
+      return ApiResponse.fail(
+        (error as any).message,
+        error as unknown as PublishProducerDTO,
+      );
+    }
+  }
+
+  @SubscribeMessage(BroadcastEvents.TOGGLE_PRODUCER_STATE)
+  async toggleProducerState(client: Socket, payload: ToggleProducerStateDTO){
+    try{
+      const {room, action} = payload;
+      const socketId = payload.socketId || client.id;
+      let {isAudioTurnedOff, isVideoTurnedOff, audiooProducer, videoProducer} = (this.roomsUsers[room])[socketId] || {};
+      const eventPayload = {...payload, socketId}
+      
+      if(action === "mute"){
+        await audiooProducer?.pause();
+        isAudioTurnedOff = true;
+      }else if(action === "unMute"){
+        await audiooProducer?.resume();
+        isAudioTurnedOff  = false;
+      }else if(action === "turnOffVideo"){
+        await videoProducer?.pause();
+        isVideoTurnedOff = true;
+      }else if(action === "turnOnVideo"){
+        await videoProducer?.resume();
+        isVideoTurnedOff = false;
+      }
+      this.updateRoomSocketUser(room, socketId, {isVideoTurnedOff, isAudioTurnedOff});
+      const producerDto = this.getProducerDTOFromSocket(socketId, room);
+      client.to(room).emit(BroadcastEvents.TOGGLE_PRODUCER_STATE, producerDto);
+    }catch(error){
+      console.log("Error toggling producermode", error.message)
+    }
+  }
 
   private updateRoomSocketUser(
     room: string,
@@ -335,20 +438,40 @@ export class CallGateway
 
   notifyAndDeleteClosedProducers(client: Socket) {
     const allSockets: ISocketUser[] = Object.values(this.roomsUsers);
-    const disconnectingSocket: IUserConnectionDetail = allSockets.find((socketObj: ISocketUser) => socketObj[client.id]);
-    if (!disconnectingSocket) {
-      console.log('Unknown socket disconnected');
-      return;
+    const disconnectingSocket: IUserConnectionDetail = allSockets.find(
+      (socketObj: ISocketUser) => socketObj[client.id],
+    );
+    if(!disconnectingSocket) return;
+    const { socketId, userId, room } = disconnectingSocket[client.id];
+    if (
+      this.roomsUsers[room] &&
+      this.roomsUsers[room][client.id]
+    ) {
+      delete this.roomsUsers[room][client.id];
     }
-    const { producerId, userId, room } = disconnectingSocket[client.id];
-    if((this.roomsUsers[room] && this.roomsUsers[room][client.id]) && this.roomsUsers[room][client.id].producerId){
-      delete this.roomsUsers[room][client.id].producer;
-      delete this.roomsUsers[room][client.id].producerId;
-   }
-    
-    console.log("Producer lett room::", room);
+
+    console.log('Producer lett room::', room);
+    const producerDto: IProducerUser = this.getProducerDTOFromSocket(socketId, room);
     this.server
       .to(room)
-      .emit(ServerEvents.PRODUCER_CLOSED, { producerId, userId });
+      .emit(BroadcastEvents.PRODUCER_CLOSED, producerDto);
+  }
+
+  getProducerDTOFromSocket(socketId: string, room: string): IProducerUser {
+    let producingDto: IProducerUser;
+    const socketUser = this.roomsUsers[room] ? this.roomsUsers[room][socketId] : null;
+    if(socketUser){
+      producingDto = {
+        isAudioTurnedOff: socketUser.isAudioTurnedOff,
+        isVideoTurnedOff: socketUser.isVideoTurnedOff,
+        videoProducerId: socketUser.videoProducerId,
+        audioProducerId: socketUser.audioProducerId,
+        socketId,
+        userId: socketUser.userId,
+      }
+      return producingDto;
+    }
+
+
   }
 }

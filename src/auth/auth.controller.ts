@@ -21,10 +21,15 @@ export class AuthController {
   // TODO: add permission guard to this route
   @ApiCreatedResponse()
   @HttpCode(HttpStatus.CREATED)
-  @Post('/register-admin')
+  @Post('/register')
   async registerAdminAccount(@Body() payload: UserProfileDTO, @Req() req) {
-    const authUser = await this.authService.createAccount(payload);
-    ApiResponse.success('User Account Created Successfully', authUser);
+    await this.authService.createAccount(payload);
+    const tokenData = {
+      userAgent: req.headers['user-agent'],
+      ipAddress: req.ip,
+    };
+    const res = await this.authService.login(payload, tokenData)
+    return ApiResponse.success('User Account Created Successfully', res);
   }
 
   @HttpCode(HttpStatus.OK)

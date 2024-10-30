@@ -14,10 +14,20 @@ export class CreatedConsumerDTO {
     kind: MediaSoup.types.MediaKind;
 }
 export class IProducerUser {
-    producerId: string;
+    videoProducerId: string;
+    audioProducerId: string;
     userId: string;
     name?: string;
+    socketId: string;
+    isVideoTurnedOff: boolean; 
+    isAudioTurnedOff: boolean;
 }
 export class IProducersDTO {
-    [producerId: string]: IProducerUser
+    [socketId: string]: IProducerUser
+}
+
+export class ToggleProducerStateDTO {
+    room: string;
+    action: "mute" | "unMute" | "turnOffVideo" | "turnOnVideo";
+    socketId?: string;
 }
