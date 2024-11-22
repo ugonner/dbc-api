@@ -1,4 +1,5 @@
 import MediaSoup from 'mediasoup';
+import { UserReactions } from '../../interfaces/socket-user';
 
 export class CreatedTransportDTO {
     id: string;
@@ -29,5 +30,10 @@ export class IProducersDTO {
 export class ToggleProducerStateDTO {
     room: string;
     action: "mute" | "unMute" | "turnOffVideo" | "turnOnVideo";
+    socketId?: string;
+}
+export class UserReactionDTO {
+    room: string;
+    action: UserReactions;
     socketId?: string;
 }

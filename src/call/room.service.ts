@@ -36,6 +36,7 @@ export class RoomService {
     const queryRunner: QueryRunner = this.dataSource.createQueryRunner();
     await queryRunner.startTransaction();
     try {
+      console.log("userId", userId)
       const user = await queryRunner.manager.findOneBy(Profile, { userId });
       if (!user) throw new NotFoundException('User Account not found');
       const roomId = await DBUtils.generateUniqueID(

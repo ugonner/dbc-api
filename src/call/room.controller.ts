@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Get, InternalServerErrorException, Param, ParseIntPipe, Post, Query } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Get, InternalServerErrorException, Param, ParseIntPipe, Post, Query, UseGuards } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import { RoomService } from "./room.service";
 import { QueryRoomDTO, RoomDTO, UpdateRoomInviteesDTO } from "../shared/dtos/room.dto";
@@ -6,6 +6,8 @@ import { ApiResponse } from "../shared/helpers/apiresponse";
 import { CallGateway } from "./call.gateway";
 import { ISocketUser, IUserConnectionDetail } from "../shared/interfaces/socket-user";
 import { ClientEvents } from "../shared/enums/events.enum";
+import { User } from "../shared/guards/decorators/user.decorator";
+import { JwtGuard } from "../shared/guards/jwt.guards";
 
 @ApiTags("room")
 @Controller("room")
@@ -15,9 +17,10 @@ export class RoomController {
     ){}
 
     @Post()
+    @UseGuards(JwtGuard)
     async createRoom(
         @Body() payload: RoomDTO,
-        @Param("userId") userId: string
+        @User("userId") userId: string
     ){
         const room = await this.roomService.createRoom(userId, payload);
         if(!room) throw new InternalServerErrorException("Something went wrong creating room");

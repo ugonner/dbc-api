@@ -6,6 +6,7 @@ import { AuthService } from './auth.service';
 import { UserModule } from 'src/user/user.module';
 import { JwtModule } from '@nestjs/jwt';
 import { NotificationModule } from '../notifiction/notification.module';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 @Module({
   imports: [
     JwtModule,

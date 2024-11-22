@@ -3,6 +3,8 @@ import MediaSoup from "mediasoup";
 export class JoinRoomDTO {
     userId: string;
     room: string;
+    userName?: string;
+    avatar?: string;
 }
 
 export class getRouterRTCCapabilitiesDTO{

@@ -1,5 +1,5 @@
 import MediaSoup from "mediasoup";
-export interface IUserConnectionDetail {
+export interface IUserConnectionDetail extends IProducerUser {
   userId?: string;
   socketId?: string;
   room?: string;
@@ -16,20 +16,45 @@ export interface IUserConnectionDetail {
   isAdmin?: boolean;
   isPublishing?: boolean;
   isOwner?: boolean;
-  isVideoTurnedOff?: boolean,
-  isAudioTurnedOff?: boolean,
+
 }
 
 export interface ISocketUser {
   [socketId: string]: IUserConnectionDetail
 }
-export interface IProducerUser {
+export interface IProducerUser extends IUserReactions {
   userId?: string;
-  videoProducerId: string;
-  audioProducerId: string;
-  socketId: string;
-  isAudioTurnedOff: boolean;
-  isVideoTurnedOff: boolean;
   userName?: string;
+  avatar?: string;
+  videoProducerId?: string;
+  audioProducerId?: string;
+  socketId?: string;
+  isAudioTurnedOff?: boolean;
+  isVideoTurnedOff?: boolean;
   mediaStream?: MediaStream;
+  
+}
+
+export interface IUserReactions {
+  //USER REACTION
+  
+  raizingHand?: boolean;
+  clapping?: boolean;
+  laughing?: boolean;
+  angry?: boolean;
+  indifferent?: boolean;
+  happy?: boolean;
+  agreeing?: boolean;
+  disagreeing?: boolean;
+}
+
+export enum UserReactions {
+  RaizingHand = "raizingHand",
+  Clapping = "clapping",
+  Laughing = "laughing",
+  Angry =  "angry",
+  Indifferent = "indifferent",
+  Happy = "happy",
+  Agreeing = "agreeing",
+  Disagreeing = "disagreeing" 
 }

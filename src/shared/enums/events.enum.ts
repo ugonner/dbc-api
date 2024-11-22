@@ -17,5 +17,7 @@ export enum BroadcastEvents {
     REQUEST_TO_PUBLISH = "requestToPublish",
     REQUEST_TO_JOIN = "requestToJoin",
     TOGGLE_PRODUCER_STATE = "toggleProducerState",
-    JOIN_REQUEST_ACCEPTED = "join_request_accepted"
+    JOIN_REQUEST_ACCEPTED = "join_request_accepted",
+    JOIN_REQUEST_REJECTED = "join_request_rejected",
+    USER_REACTION = "User_Reaction"
 }
