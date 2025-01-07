@@ -1,19 +1,24 @@
 import {
   Body,
   Controller,
+  Get,
   HttpCode,
   HttpStatus,
   Ip,
   Post,
+  Query,
   Req,
+  UseFilters,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { UserProfileDTO } from '../shared/dtos/user.dto';
 import { ApiResponse } from '../shared/helpers/apiresponse';
-import { AuthDTO, OtpAuthDTO } from '../shared/dtos/auth.dto';
+import { AuthDTO, OtpAuthDTO, QueryAuthDTO } from '../shared/dtos/auth.dto';
 import { ApiCreatedResponse, ApiTags } from '@nestjs/swagger';
+import { AllExceptionFilter } from '../shared/interceptors/all-exceptions.filter';
 
 @ApiTags("Auth")
+@UseFilters(AllExceptionFilter)
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
@@ -96,5 +101,13 @@ export class AuthController {
   async resendOtp(@Body() payload: OtpAuthDTO) {
     const user = await this.authService.resendOtp(payload);
     return ApiResponse.success('Successfully sent verification code', user);
+  }
+
+  @Get()
+  async getAuthUsers(
+    @Query() payload: QueryAuthDTO,
+  ){
+    const res = await this.authService.getAuthUsers(payload);
+    return ApiResponse.success("Users fetched successfully", res);
   }
 }

@@ -9,11 +9,15 @@ import {
   JoinColumn,
   ManyToOne,
   OneToOne,
+  ManyToMany,
+  JoinTable,
 } from 'typeorm';
 import * as bcrypt from 'bcryptjs';
 import { Role } from './role.entity';
 import { AuthStatus, UserType } from '../shared/enums/auth.enum';
 import { Profile } from './user.entity';
+import { AidServiceType } from '../shared/enums/aid-service.enum';
+import { AidService } from './aid-service.entity';
 
 @Entity()
 export class Auth {
@@ -39,6 +43,13 @@ export class Auth {
   @Index({ unique: true })
   userId: string;
 
+  @Column({nullable: true})
+  firstName: string;
+  
+  @Column({nullable: true})
+  lastName: string;
+  
+
   @Column({ nullable: true })
   otp: number;
 
@@ -47,6 +58,13 @@ export class Auth {
 
   @Column('boolean', { default: false })
   isVerified: boolean;
+
+  @ManyToMany(() => AidService, (aidService) => aidService.users)
+  @JoinTable({
+    name: "AidServiceUser",
+  })
+  aidServices: AidService[];
+
 
   @ManyToOne(() => Role)
   @JoinColumn()

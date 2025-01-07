@@ -1,5 +1,10 @@
-import { Column, Entity, JoinTable, ManyToMany, ManyToOne, OneToMany, PrimaryGeneratedColumn } from "typeorm";
+import { Column, CreateDateColumn, Entity, JoinTable, ManyToMany, ManyToOne, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
 import { Profile } from "./user.entity";
+
+export class AidServiceProvider {
+    userId: string;
+    aidServiceId: number;
+}
 
 @Entity()
 export class Room {
@@ -18,6 +23,9 @@ export class Room {
     @Column()
     roomName: string;
 
+    @Column({type: "jsonb", nullable: true})
+    aidServiceProviders: AidServiceProvider[];
+    
     @ManyToMany(() => Profile)
     @JoinTable({
         name: "RoomParticipant",
@@ -25,5 +33,11 @@ export class Room {
     invitees: Profile[];
 
     @ManyToOne(() => Profile)
-    owner: Profile;    
+    owner: Profile;
+    
+    @CreateDateColumn()
+    createdAt: Date;
+
+    @UpdateDateColumn()
+    updatedAt: Date;
 }

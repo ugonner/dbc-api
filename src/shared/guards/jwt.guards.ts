@@ -7,8 +7,8 @@ import {
 import { AuthGuard } from '@nestjs/passport';
 import { Request, Response } from 'express';
 import { JwtService, TokenExpiredError } from '@nestjs/jwt';
-import { IAuthTokens } from '../auth.interface';
 import { Auth } from '../../entities/auth.entity';
+import { IAuthTokens } from '../interfaces/auth.interface';
 
 @Injectable()
 export class JwtGuard extends AuthGuard('jwt') {
@@ -33,6 +33,7 @@ export class JwtGuard extends AuthGuard('jwt') {
       const secret = process.env.JWT_ACCESS_SECRET;
       const expiresin = process.env.JWT_ACCESS_TOKEN_EXPIRATION;
       console.log("secret", secret, "expires", expiresin);
+      console.log("token", tokens)
         // Try to verify the access token
         const decodedAccessToken = this.jwtService.verify(tokens.accessToken, {
           secret: process.env.JWT_ACCESS_SECRET

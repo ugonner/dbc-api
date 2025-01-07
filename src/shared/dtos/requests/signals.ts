@@ -1,4 +1,7 @@
 import MediaSoup from "mediasoup";
+import { IAccessibilityPreferences } from "../../interfaces/socket-user";
+import { SctpStreamParameters } from "mediasoup/node/lib/fbs/sctp-parameters";
+import { RoomAidType } from "../../enums/room.enum";
 
 export class JoinRoomDTO {
     userId: string;
@@ -27,9 +30,12 @@ export class CreateProducerDTO{
     kind: MediaSoup.types.MediaKind;
     transportId: string;
     room: string;
-    mediaKind: "audio" | "video";
     isAudioTurnedOff: boolean;
     isVideoTurnedOff: boolean;
+    appData: {
+        mediaKind: "audio" | "video" | "data";
+        isScreenShare: boolean;
+    }
 }
 
 export class CreateConsumerDTO {
@@ -37,6 +43,24 @@ export class CreateConsumerDTO {
     producerId: string;
     transportId: string;
     room: string;
+    appData: {
+        mediaKind: "audio" | "video" | "data";
+        isScreenShare: boolean;
+    }
+}
+
+
+export interface CreateDataProducerDTO{
+    sctpStreamParameters: SctpStreamParameters,
+    label?: string;
+    protocol?: string;
+    appData: {
+        mediaKind: "audio" | "video" | "data";
+        isScreenShare: boolean;
+    },
+    transportId: string;
+    room: string;
+    
 }
 
 export class ProducingDTO{
@@ -51,5 +75,44 @@ export class PublishProducerDTO{
     socketId?: string;
     
 }
+
+export class CloseMediaDTO {
+    socketId?: string;
+    mediaKind: "video" | "audio";
+    isScreenSharing?: boolean;
+    room?: string;
+}
+export class AccessibilityPreferenceDTO {
+    room: string;
+    socketId?: string;
+    accessibilityPreferences: IAccessibilityPreferences;
+  }
+
+  export class ChatMessageDTO {
+    room: string;
+    socketId: string;
+    message: string;
+    usesTextualCommunication?: boolean;
+  }
+
+  
+  export interface CaptionDTO {
+    room: string;
+    socketId?: string;
+    deliveryTime?: Date;
+    buffer?: ArrayBuffer;
+    captionText?: string
+  }
+
+  export interface ICaptionText {
+    partialResult?: string;
+    finalResult?: string;
+  }
+
+  export interface RequestAidDTO {
+    roomAidType: RoomAidType;
+    room: string;
+  }
+  
 
 

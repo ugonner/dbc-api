@@ -17,8 +17,9 @@ import { validate } from 'class-validator';
 import { UserProfileDTO } from '../shared/dtos/user.dto';
 import { DBUtils } from '../shared/helpers/db';
 import { NotificationService } from '../notifiction/notification.service';
-import { AuthDTO, OtpAuthDTO } from '../shared/dtos/auth.dto';
+import { AuthDTO, OtpAuthDTO, QueryAuthDTO } from '../shared/dtos/auth.dto';
 import { Profile } from '../entities/user.entity';
+import { IQueryResult } from '../shared/interfaces/api-response.interface';
 
 @Injectable()
 export class AuthService {
@@ -53,6 +54,8 @@ export class AuthService {
       const payload: Partial<Auth> = {
         email: email.toLowerCase(),
         ...rest,
+        firstName,
+        lastName,
         isVerified: true // TODO: Remove
       };
       payload.otpTime = new Date();
@@ -287,5 +290,28 @@ export class AuthService {
       message: 'Your password was reset successfully',
     });
     return 'Password reset done';
+  }
+
+  async getAuthUsers(dto: QueryAuthDTO): Promise<IQueryResult<Auth>> {
+    const {page, limit, searchTerm, order} = dto;
+    const queryPage = page ? Number(page) : 1;
+    const queryLimit = limit ? Number(limit) : 10;
+    const querOrder = order ? order : "ASC";
+
+    const queryBuilder = this.authRepository.createQueryBuilder("user")
+    .leftJoinAndSelect(`user.aidServices`, `aidServices`);
+    
+    if(searchTerm){
+      const searchTermLowercase = searchTerm.toLowerCase();
+      let whereClause = `LOWER("user"."email") LIKE '%${searchTermLowercase}%' `;
+      ["firstName", "lastName", "phoneNumber"].forEach((field) => {
+        whereClause += `OR LOWER("user"."${field}") LIKE '%${searchTermLowercase}%' `;
+      });
+      queryBuilder.where(whereClause);
+    }
+    queryBuilder.orderBy(`"user"."firstName"`, querOrder)
+    if(page) queryBuilder.skip((queryPage - 1) * queryLimit).limit(queryLimit);
+   const [data, total] = await queryBuilder.getManyAndCount();
+  return { page: queryPage, limit: queryLimit, total, data};
   }
 }

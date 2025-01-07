@@ -183,27 +183,27 @@ export class RoomService {
   }
 
 
-  async requestToJoinRoomParticipants(roomId: string, userId: string): Promise<boolean> {
+  // async requestToJoinRoomParticipants(roomId: string, userId: string): Promise<boolean> {
     
-    const roomsUsers: ISocketUser = (this.callGateway.getRoomUsers())[roomId];
-    if(!roomsUsers) throw new NotFoundException("No room information found") 
+  //   const roomsUsers: ISocketUser = (this.callGateway.getRoomUsers())[roomId];
+  //   if(!roomsUsers) throw new NotFoundException("No room information found") 
     
-    const userSockets: IUserConnectionDetail[] = Object.values(roomsUsers);
-    if(userSockets.length === 0) throw new BadRequestException("No room users found");
-    const adminSocket = userSockets.find((user) => user.isOwner);
-    if(!adminSocket) throw new BadRequestException("Room Owner not available");
+  //   const userSockets: IUserConnectionDetail[] = Object.values(roomsUsers);
+  //   if(userSockets.length === 0) throw new BadRequestException("No room users found");
+  //   const adminSocket = userSockets.find((user) => user.isOwner);
+  //   if(!adminSocket) throw new BadRequestException("Room Owner not available");
 
-    // notify admin socket
-    const user = await this.getUserByUniqueId(userId);
+  //   // notify admin socket
+  //   const user = await this.getUserByUniqueId(userId);
 
-    const adminRes: IApiResponse<boolean> = await new Promise((resolve) => {
-      this.callGateway.getServer().to(adminSocket.socketId).emit(BroadcastEvents.REQUEST_TO_JOIN, {userId, ...(user || {})}, resolve);
-  })
+  //   const adminRes: IApiResponse<boolean> = await new Promise((resolve) => {
+  //     this.callGateway.getServer().to(adminSocket.socketId).emit(BroadcastEvents.REQUEST_TO_JOIN, {userId, ...(user || {})}, resolve);
+  // })
 
-  console.log("admin socket", adminSocket.socketId);
-  if(!adminRes) throw new BadRequestException("No response form admin");
-  console.log("admin socket", adminSocket.socketId);
-  console.log("Response is here", adminRes);
-  return adminRes.data ? true : false ;
-  }
+  // console.log("admin socket", adminSocket.socketId);
+  // if(!adminRes) throw new BadRequestException("No response form admin");
+  // console.log("admin socket", adminSocket.socketId);
+  // console.log("Response is here", adminRes);
+  // return adminRes.data ? true : false ;
+  // }
 }

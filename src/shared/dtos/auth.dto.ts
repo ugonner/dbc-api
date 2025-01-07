@@ -7,6 +7,7 @@ import {
     IsPhoneNumber,
     Length,
   } from 'class-validator';
+import { QueryRequestDTO } from './query-request.dto';
   
   export class AuthDTO {
   
@@ -53,4 +54,6 @@ import {
     password?: string;
     
   }
+
+  export class QueryAuthDTO extends QueryRequestDTO {}
   

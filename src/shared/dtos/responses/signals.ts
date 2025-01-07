@@ -1,5 +1,5 @@
 import MediaSoup from 'mediasoup';
-import { UserReactions } from '../../interfaces/socket-user';
+import { IProducerUser, UserReactions } from '../../interfaces/socket-user';
 
 export class CreatedTransportDTO {
     id: string;
@@ -14,15 +14,7 @@ export class CreatedConsumerDTO {
     rtpParameters: MediaSoup.types.RtpParameters;
     kind: MediaSoup.types.MediaKind;
 }
-export class IProducerUser {
-    videoProducerId: string;
-    audioProducerId: string;
-    userId: string;
-    name?: string;
-    socketId: string;
-    isVideoTurnedOff: boolean; 
-    isAudioTurnedOff: boolean;
-}
+
 export class IProducersDTO {
     [socketId: string]: IProducerUser
 }
@@ -35,5 +27,6 @@ export class ToggleProducerStateDTO {
 export class UserReactionDTO {
     room: string;
     action: UserReactions;
+    actionState: boolean;
     socketId?: string;
 }

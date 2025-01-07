@@ -49,14 +49,14 @@ export class RoomController {
         return ApiResponse.success("Participants added successfully", res);
     }
 
-    @Get("/request-to-join/:roomId/:userId")
-    async requestToJoinRoomParticipants(
-        @Param("roomId") roomId: string,
-        @Param("userId") userId: string,
+    // @Get("/request-to-join/:roomId/:userId")
+    // async requestToJoinRoomParticipants(
+    //     @Param("roomId") roomId: string,
+    //     @Param("userId") userId: string,
         
-    ){
-        const res = await this.roomService.requestToJoinRoomParticipants(roomId, userId);
-        ApiResponse.success("Request Response done", res);
-    }
+    // ){
+    //     const res = await this.roomService.requestToJoinRoomParticipants(roomId, userId);
+    //     ApiResponse.success("Request Response done", res);
+    // }
     
 }

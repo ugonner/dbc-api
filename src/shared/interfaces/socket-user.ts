@@ -1,5 +1,5 @@
 import MediaSoup from "mediasoup";
-export interface IUserConnectionDetail extends IProducerUser {
+export interface IUserConnectionDetail extends IProducerUser  {
   userId?: string;
   socketId?: string;
   room?: string;
@@ -10,9 +10,13 @@ export interface IUserConnectionDetail extends IProducerUser {
   consumerId?: string;
   videoProducerId?: string;
   audioProducerId?: string;
+  dataProducerId?: string;
   videoProducer?: MediaSoup.types.Producer;
   audiooProducer?: MediaSoup.types.Producer;
+  dataProducer?: MediaSoup.types.DataProducer;
   consumer?: MediaSoup.types.Consumer;
+  dataConsumer?: MediaSoup.types.DataConsumer;
+  dataConsumerId?: string;
   isAdmin?: boolean;
   isPublishing?: boolean;
   isOwner?: boolean;
@@ -22,22 +26,24 @@ export interface IUserConnectionDetail extends IProducerUser {
 export interface ISocketUser {
   [socketId: string]: IUserConnectionDetail
 }
-export interface IProducerUser extends IUserReactions {
+export interface IProducerUser extends IUserReactions, IAccessibilityPreferences {
   userId?: string;
   userName?: string;
   avatar?: string;
   videoProducerId?: string;
   audioProducerId?: string;
+  dataProducerId?: string;
   socketId?: string;
   isAudioTurnedOff?: boolean;
   isVideoTurnedOff?: boolean;
   mediaStream?: MediaStream;
   
 }
+export interface IAccessibilityPreferences {
+  usesTextualCommunication?: boolean;
+}
 
 export interface IUserReactions {
-  //USER REACTION
-  
   raizingHand?: boolean;
   clapping?: boolean;
   laughing?: boolean;
