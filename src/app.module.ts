@@ -12,10 +12,15 @@ import { MailerModule } from '@nestjs-modules/mailer';
 import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handlebars.adapter';
 import { MailModule } from './mail/mail.module';
 import { TalkableModule } from './talkable/talkable.module';
+import { FileUploadModule } from './file-upload/file-upload.module';
 import * as path from 'path';
+import { ServeStaticModule } from '@nestjs/serve-static';
 
 @Module({
   imports: [
+    ServeStaticModule.forRoot({
+      rootPath: path.join(__dirname, "..", "public"),
+    }),
     TalkableModule,
     CallModule,
     ConfigModule.forRoot({isGlobal: true}),
@@ -58,6 +63,7 @@ import * as path from 'path';
       },
     }),
     MailModule,
+    FileUploadModule,
   
 
   ],
