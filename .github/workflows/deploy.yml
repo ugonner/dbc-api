@@ -1,0 +1,47 @@
+name: Deploy to AWS EC2
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Set up SSH key
+      run: |
+        echo "${{ secrets.EC2_PRIVATE_KEY }}" > deploy_key.pem
+        chmod 600 deploy_key.pem
+
+    - name: Deploy Code to EC2
+      run: |
+        ssh -o StrictHostKeyChecking=no -i deploy_key.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
+          # Set up the deployment directory
+          if [ ! -d "${{ secrets.DEPLOY_PATH }}" ]; then
+            mkdir -p ${{ secrets.DEPLOY_PATH }}
+          fi
+          cd ${{ secrets.DEPLOY_PATH }}
+
+          # Clone the repo or pull latest changes
+          if [ ! -d ".git" ]; then
+            git clone https://github.com/${{ github.repository }} .
+          else
+            git reset --hard
+            git pull origin main
+          fi
+
+          # Install dependencies
+          npm install --production
+          npm run build
+
+          # Restart the application using PM2
+          pm2 restart all || pm2 start npm --name "myapp" -- start
+        EOF
+
+    - name: Clean Up SSH Key
+      run: rm -f deploy_key.pem
