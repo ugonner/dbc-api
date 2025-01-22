@@ -35,6 +35,9 @@ jobs:
             git pull origin main
           fi
 
+          # copy env-prod to .env
+          cat env-prod > .env
+          
           # Install dependencies
           npm install --production
           npm run build
