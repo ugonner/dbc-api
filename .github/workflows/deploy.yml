@@ -39,7 +39,7 @@ jobs:
           cat env-prod > .env
           
           # Install dependencies
-          npm install --production
+          npm ci
           npm run build
 
           # Restart the application using PM2
