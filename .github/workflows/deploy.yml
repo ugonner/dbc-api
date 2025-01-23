@@ -38,7 +38,7 @@ jobs:
           # copy env-prod to .env
           cat env-prod > .env
           
-          # Install dependencies
+          # Install dependencies from package-lock.json
           npm ci
           npm run build
 
