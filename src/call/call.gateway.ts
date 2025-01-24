@@ -1,4 +1,3 @@
-//process.env.GOOGLE_APPLICATION_CREDENTIALS = path.join(__dirname, "..","..", "configs", "google", "service-key.json");
 
 import {
   MessageBody,
@@ -58,7 +57,6 @@ import { RoomService } from './room.service';
 import { IRoomContext } from '../shared/interfaces/room';
 
 import * as path from 'path';
-import { SpeechClient } from '@google-cloud/speech';
 import { Transaction } from 'typeorm';
 import { DataConsumer, DataConsumerOptions } from 'mediasoup/node/lib/DataConsumer';
 import { Client } from 'socket.io/dist/client';
@@ -101,7 +99,6 @@ export class CallGateway
     private roomService: RoomService,
   ) {}
 
-  // private speechClient: SpeechClient = new SpeechClient({keyFilename: path.join(__dirname, "..","..", "configs", "google", "service-key.json") })
   // private recognizeStream;
 
 
