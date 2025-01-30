@@ -22,4 +22,4 @@ NODEMAILER_PASS=kmiexofiwviermhp
 NODEMAILER_USERNAME=Bonaventure
 NODEMAILER_HOST=smtp.gmail.com
 
-APP_URL=https://192.168.43.219:8100
+APP_URL=https://ugonnatalk.vercel.app
