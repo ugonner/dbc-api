@@ -39,11 +39,11 @@ jobs:
           cat env-prod > .env
           
           # Install dependencies from package-lock.json
-          npm ci
-          npm run build
+          sudo npm ci
+          sudo npm run build
 
           # Restart the application using PM2
-          pm2 restart all || pm2 start npm --name "myapp" -- start
+          sudo pm2 restart all || pm2 start npm --name "myapp" -- start
         EOF
 
     - name: Clean Up SSH Key
