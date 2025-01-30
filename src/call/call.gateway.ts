@@ -62,6 +62,7 @@ import { DataConsumer, DataConsumerOptions } from 'mediasoup/node/lib/DataConsum
 import { Client } from 'socket.io/dist/client';
 import { DataProducer, DataProducerOptions } from 'mediasoup/node/lib/DataProducer';
 import { AidServiceService } from '../aid-service/aid-service.service';
+import { PortRange } from 'mediasoup/node/lib/fbs/transport';
 
 
 
@@ -194,8 +195,7 @@ export class CallGateway
         listenIps: [{ ip: '192.168.43.219', announcedIp: null }],
         enableUdp: true,
         enableTcp: true,
-        enableSctp: true,
-        
+        enableSctp: true
       },
     );
     this.updateRoomSocketUser(

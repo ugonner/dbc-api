@@ -28,6 +28,6 @@ async function bootstrap() {
   OpenAPIConfiguration.configureSwagger(app);
   
 const port = process.env.PORT || 8000;
-  await app.listen(port, () => console.log("Server RUnning on port", port ));
+  await app.listen(port, "0.0.0.0", () => console.log("Server RUnning on port", port ));
 }
 bootstrap();
