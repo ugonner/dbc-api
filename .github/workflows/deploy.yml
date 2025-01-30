@@ -44,7 +44,8 @@ jobs:
 
           # Restart the application using PM2
           # sudo pm2 restart all || pm2 start npm --name "myapp" -- start
-          sudo npm run start
+          # sudo npm run start
+          pm2 start dist/main.js --name dbcapp
         EOF
 
     - name: Clean Up SSH Key
