@@ -43,7 +43,8 @@ jobs:
           sudo npm run build
 
           # Restart the application using PM2
-          sudo pm2 restart all || pm2 start npm --name "myapp" -- start
+          # sudo pm2 restart all || pm2 start npm --name "myapp" -- start
+          sudo npm run start
         EOF
 
     - name: Clean Up SSH Key
