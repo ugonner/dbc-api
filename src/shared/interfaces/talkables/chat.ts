@@ -13,6 +13,10 @@ export interface IChat {
     lastMessage?: IChatMessage;
 }
 
+export interface IMessageAttachment {
+    attachmentUrl: string;
+    attachmentType: "video" | "audio";
+}
 export interface IChatMessage {
     chatId: string;
     message?: string;

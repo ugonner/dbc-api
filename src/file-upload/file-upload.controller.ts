@@ -3,6 +3,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { FileUploadService } from './file-upload.service';
 import { ApiResponse } from '../shared/helpers/apiresponse';
 import { AllExceptionFilter } from '../shared/interceptors/all-exceptions.filter';
+import { IMessageAttachment } from '../shared/interfaces/talkables/chat';
 
 @Controller('file-upload')
 @UseFilters(AllExceptionFilter)
@@ -17,7 +18,10 @@ export class FileUploadController {
         @UploadedFile() file: {buffer: Buffer, type: string}
     ){
         console.log("post upload", file.buffer)
-        const res = await this.fileUploadService.createAudioFile(file);
+        let res: IMessageAttachment;
+        if(/aws/i.test(process.env.STORAGE_PLATFORM)) res = await this.fileUploadService.uploadMessageAttachmentToS3(file);
+       else res = await this.fileUploadService.uploadMessageAttachmentToLocal(file);
+        
         return ApiResponse.success("file uploaded successfuly", res);
     }
 }
