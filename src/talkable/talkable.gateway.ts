@@ -7,6 +7,7 @@ import { TalkableService } from './talkable.service';
 import { TalkableChatEvents } from '../shared/enums/talkables/chat-event.enum';
 import { IChat, IChatMessage, IChatUser } from '../shared/interfaces/talkables/chat';
 import { ApiResponse, IApiResponse } from '../shared/helpers/apiresponse';
+import { CLIENT_RENEG_LIMIT } from 'tls';
 
 @UseFilters(EventExceptionHandler)
 @UseInterceptors(ResponseInterceptor)
@@ -117,6 +118,7 @@ activeUsers: IChatUser[] = [];
       const activeUser = await this.getUser(chatConversant);
       chat = payload;
       client.join(payload.chatId);
+      this.server.to(client.id).emit(TalkableChatEvents.JOIN_INVITE_ACCEPTANCE, chat);
       client.to(activeUser?.socketId).emit(TalkableChatEvents.JOIN_INVITE_ACCEPTANCE, chat);
       return ApiResponse.success("Join invite accepted successfully", chat);
     }catch(error){
