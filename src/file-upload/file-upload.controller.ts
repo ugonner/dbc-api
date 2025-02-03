@@ -17,10 +17,10 @@ export class FileUploadController {
     async createAudioFile(
         @UploadedFile() file: {buffer: Buffer, type: string}
     ){
-        console.log("post upload", file.buffer)
         let res: IMessageAttachment;
         if(/aws/i.test(process.env.STORAGE_PLATFORM)) res = await this.fileUploadService.uploadMessageAttachmentToS3(file);
-       else res = await this.fileUploadService.uploadMessageAttachmentToLocal(file);
+        else if(/cloudinary/i.test(process.env.STORAGE_PLATFORM)) res = await this.fileUploadService.uploadMessageAttachmentToCloudinary(file);
+        else res = await this.fileUploadService.uploadMessageAttachmentToLocal(file);
         
         return ApiResponse.success("file uploaded successfuly", res);
     }

@@ -7,6 +7,7 @@ import { Readable } from 'stream';
 import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import * as toStream from 'buffer-to-stream';
 import { IMessageAttachment } from '../shared/interfaces/talkables/chat';
+import { UploadApiResponse, v2 } from 'cloudinary';
 
 @Injectable()
 export class FileUploadService {
@@ -73,4 +74,56 @@ export class FileUploadService {
       attachmentUrl,
     };
   }
+  async uploadMessageAttachmentToCloudinary(file: {
+    buffer: Buffer;
+    type: string;
+  }): Promise<IMessageAttachment> {
+    
+    const cloudinaryApiKey =
+      process.env.NODE_ENV === 'production'
+        ? process.env.CLOUDINARY_API_KEY
+        : process.env.CLOUDINARY_API_KEY;
+    const cloudinaryApiKeySecret =
+      process.env.NODE_ENV === 'production'
+        ? process.env.CLOUDINARY_API_SECRET
+        : process.env.CLOUDINARY_API_SECRET;
+
+    const cloudinaryCloudName = process.env.CLOUDINARY_CLOUD_NAME;
+    const awsRegion = process.env.AWS_REGION || 'eu-north-1';
+    const cloudinaryV2 = v2;
+    cloudinaryV2.config({
+      api_key: cloudinaryApiKey,
+      api_secret: cloudinaryApiKeySecret,
+      cloud_name: cloudinaryCloudName
+    });
+    
+
+    const fileStream = toStream(file.buffer);
+    const attachmentType = /video/i.test(file.type) ? 'video' : 'audio';
+    const key = `${Date.now()}-${attachmentType}.wav`;
+
+    const uploadStreamPromise: UploadApiResponse = await new Promise((resolve, reject) => {
+      const uploadStream = cloudinaryV2.uploader.upload_stream({
+        resource_type: "auto"
+      }, (err, result) => {
+        if(err) reject(err);
+        resolve(result)
+      });
+      fileStream.pipe(uploadStream);
+    });
+    return {
+      attachmentType,
+      attachmentUrl: uploadStreamPromise.secure_url
+    }
+
+    
+
+    const attachmentUrl = `https://${this.awsS3Bucket}.s3.${awsRegion}.amazonaws.com/${key}`;
+    return {
+      attachmentType,
+      attachmentUrl,
+    };
+  }
+
+  
 }
