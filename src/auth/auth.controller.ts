@@ -28,7 +28,7 @@ export class AuthController {
   @HttpCode(HttpStatus.CREATED)
   @Post('/register')
   async registerAdminAccount(@Body() payload: UserProfileDTO, @Req() req) {
-    await this.authService.createAccount(payload);
+    const resp = await this.authService.createAccount(payload);
     const tokenData = {
       userAgent: req.headers['user-agent'],
       ipAddress: req.ip,

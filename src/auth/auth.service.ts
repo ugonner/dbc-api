@@ -101,9 +101,10 @@ export class AuthService {
       await queryRunner.commitTransaction();
       newAuth = auth;
     } catch (error) {
-      await DBUtils.handleFailedQueryRunner(queryRunner, error as Error);
       errorData = error;
+      await queryRunner.rollbackTransaction();
     } finally {
+      await queryRunner.release();
       if(errorData) throw errorData;
       return newAuth;
     }
@@ -119,7 +120,7 @@ export class AuthService {
   async login(dto: AuthDTO, values: { userAgent: string; ipAddress: string }) {
     const user = await this.authRepository.findOne({
       where: [
-        { email: dto.email },
+        { email: dto.email.toLowerCase() },
         { phoneNumber: dto.phoneNumber}
       ],
       relations: ["profile"]
@@ -129,7 +130,7 @@ export class AuthService {
     if (!user.isVerified) throw new BadRequestException('Account not verified');
 
     const isPasswordMatch = await bcrypt.compare(dto.password, user.password);
-    if (!isPasswordMatch) throw new NotFoundException('Invalid credentials');
+    if (!isPasswordMatch) throw new BadRequestException('Invalid credentials');
 
     const { accessToken, refreshToken } =
       await this.generateRefreshAndAccessToken(user.toAuthData(), values);
