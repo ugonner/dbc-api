@@ -190,9 +190,10 @@ export class CallGateway
     payload: createTransportDTO,
   ): Promise<IApiResponse<CreatedTransportDTO>> {
     const { room, isProducer } = payload;
+    const announcedIp = /production/i.test(process.env.NODE_ENV) ? process.env.AWS_PUBLIC_IP : null;
     const transport = await this.roomRouters[room].router.createWebRtcTransport(
       {
-        listenIps: [{ ip: '192.168.43.219', announcedIp: null }],
+        listenIps: [{ ip: '0.0.0.0', announcedIp }],
         enableUdp: true,
         enableTcp: true,
         enableSctp: true
