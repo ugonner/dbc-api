@@ -35,6 +35,8 @@ export class CreateProducerDTO{
     appData: {
         mediaKind: "audio" | "video" | "data";
         isScreenShare: boolean;
+        isVideoTurnedOff: boolean;
+        isAudioTurnedOff: boolean;
     }
 }
 

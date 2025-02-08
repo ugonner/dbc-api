@@ -271,7 +271,7 @@ export class CallGateway
           ...socketUserPayload,
           audiooProducer: producer as MediaSoup.types.Producer,
           audioProducerId: producer.id,
-          isAudioTurnedOff: false,
+          isAudioTurnedOff: dto.appData?.isAudioTurnedOff ? true : false,
         };
         this.updateRoomSocketUser(room, client.id, socketUserPayload);
       } else if (dto.appData?.mediaKind === "video") {
@@ -279,7 +279,7 @@ export class CallGateway
           ...socketUserPayload,
           videoProducer: producer as MediaSoup.types.Producer,
           videoProducerId: producer.id,
-          isVideoTurnedOff: false,
+          isVideoTurnedOff: dto.appData?.isVideoTurnedOff ? true : false,
         };
         this.updateRoomSocketUser(room, client.id, socketUserPayload);
       }
