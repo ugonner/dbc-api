@@ -17,7 +17,7 @@ export class FileUploadService {
     buffer: Buffer;
     type: string;
   }): Promise<IMessageAttachment> {
-    const attachmentUrl = `/talkables/message-attachments/${Date.now()}.wav`;
+    const attachmentUrl = `${process.env.BASE_URL}/talkables/message-attachments/${Date.now()}.wav`;
     const filePath = path.join(__dirname, '..', '..', 'public', attachmentUrl);
     fs.writeFileSync(filePath, file.buffer);
     await new Promise((resolve, reject) => {

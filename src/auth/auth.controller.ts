@@ -103,6 +103,12 @@ export class AuthController {
     return ApiResponse.success('Successfully sent verification code', user);
   }
 
+  @Get("/host-ip")
+  async getHostIp() {
+    const ipAddress = await this.authService.getIP();
+    return ApiResponse.success("IP Address retrieved", {ipAddress})
+  }
+
   @Get()
   async getAuthUsers(
     @Query() payload: QueryAuthDTO,

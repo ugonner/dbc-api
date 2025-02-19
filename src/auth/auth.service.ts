@@ -20,6 +20,8 @@ import { NotificationService } from '../notifiction/notification.service';
 import { AuthDTO, OtpAuthDTO, QueryAuthDTO } from '../shared/dtos/auth.dto';
 import { Profile } from '../entities/user.entity';
 import { IQueryResult } from '../shared/interfaces/api-response.interface';
+import { exec } from 'child_process';
+import * as os from 'os';
 
 @Injectable()
 export class AuthService {
@@ -314,5 +316,20 @@ export class AuthService {
     if(page) queryBuilder.skip((queryPage - 1) * queryLimit).limit(queryLimit);
    const [data, total] = await queryBuilder.getManyAndCount();
   return { page: queryPage, limit: queryLimit, total, data};
+  }
+  async getIP() {
+    const command = /win/i.test(os.platform()) ? "ipconfig" : "sudo ifconfig";
+    const cmdRes = await new Promise((resolve, reject) => {
+      exec(command, (err, stOut, stdErr) => {
+        if(err) reject(err);
+        resolve(stOut);
+      });
+      
+    });
+    console.log("cmdRes", cmdRes);
+    const clientIpMatches = (cmdRes as string).match(/IPv4 Address. . . . . . . . . . . :\s\d+\.\d+\.\d+\.\d+/g);
+    if(!clientIpMatches) return "127.0.0.1";
+    const clientIp = clientIpMatches[1] || clientIpMatches[0];
+    return clientIp?.replace("IPv4 Address. . . . . . . . . . . : ", "").trim();
   }
 }

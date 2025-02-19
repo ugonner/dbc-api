@@ -748,6 +748,7 @@ export class CallGateway
       });
       const producerDto = this.getProducerDTOFromSocket(socketId, room);
       client.to(room).emit(BroadcastEvents.TOGGLE_PRODUCER_STATE, producerDto);
+      
     } catch (error) {
       console.log('Error toggling producermode', error.message);
     }
