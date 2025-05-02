@@ -206,7 +206,6 @@ export class CallGateway
         ? { producerTransportId: transport.id, producerTransport: transport }
         : { consumerTransportId: transport.id, consumerTransport: transport },
     );
-    console.log("sctp state", transport.sctpParameters)
     const res = {
       id: transport?.id,
       iceParameters: transport.iceParameters,
@@ -394,6 +393,7 @@ export class CallGateway
     };
     return ApiResponse.success('consumer created successfully', res, 201);
   }
+
   @SubscribeMessage(ClientEvents.CONSUME_DATA)
   async consomeData(
     client: Socket,
