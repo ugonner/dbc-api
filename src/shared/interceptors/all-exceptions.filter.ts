@@ -20,15 +20,18 @@ export class AllExceptionFilter implements ExceptionFilter {
     let status: HttpStatus;
     let errorMessage: string;
 
-    // Log the exception for debugging purposes
-    Logger.error(`Exception caught: ${exception.message}`, {
-      stack: exception.stack,
-    });
-
+   
     // Set default error message and status code
     errorMessage =
       'Something went wrong while processing your request. Please contact Admin.';
     status = HttpStatus.INTERNAL_SERVER_ERROR;
+
+    const exceptionResponseMessage = Array.isArray(exception.response?.message) ? exception.response?.message[0] : exception.response?.message;
+
+     // Log the exception for debugging purposes
+     Logger.error(`Exception caught: ${ exception.message} with exception response: ${exceptionResponseMessage} `, {
+      stack: exception.stack,
+    });
 
     // Customize error response based on exception type
     if (exception instanceof UnauthorizedException) {
@@ -50,7 +53,7 @@ export class AllExceptionFilter implements ExceptionFilter {
     // Send error response only if headers have not been sent
     if (!response.headersSent) {
       response.status(status).json(
-        ApiResponse.fail(errorMessage, {
+        ApiResponse.fail( exceptionResponseMessage || errorMessage, {
           status,
           error: exception?.response?.message,
         }),

@@ -122,7 +122,7 @@ export class AidServiceService {
         if (!auth.aidServices.find((aid) => aid.id === aidServiceId))
           throw new BadRequestException('Aid service NOT already added');
         auth.aidServices = auth.aidServices?.filter(
-          (aidService) => aidService.id !== aidService.id,
+          (aService) => aService.id !== aidService.id,
         );
       }
       const updatedAuth = await queryRunner.manager.save(Auth, auth);
@@ -154,7 +154,6 @@ export class AidServiceService {
         .where(`AidServiceUser.aidServiceId = :aidServiceId`, { aidServiceId })
         //.andWhere(`AidServiceUser.isBusy = false`)
         .getMany();
-
         
         const roomData = await queryRunner.manager.findOneBy(Room, { roomId });
         if (!roomData) throw new NotFoundException('Room not foundd');

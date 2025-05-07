@@ -28,6 +28,7 @@ export class TalkableGateway implements OnGatewayInit, OnGatewayConnection, OnGa
 DBCChatUser: IChatUser = {
   userName: "DBC_OFFICIAL",
   userId: "dbc_official",
+  phoneNumber: "08012345678"
 }
 
 activeChats: IChat[] = [];
@@ -51,7 +52,7 @@ activeUsers: IChatUser[] = [];
     try{
       payload.socketId = client.id;
       const chatData: IChat = {
-        chatId: `${payload.userName.replace(/\s/ig, "_")}-${this.DBCChatUser.userName}`,
+        chatId: `ID${payload.phoneNumber}TK`,
         users: [payload, this.DBCChatUser],
       };
 

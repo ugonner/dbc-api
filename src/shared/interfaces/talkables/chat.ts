@@ -4,7 +4,8 @@ export interface IChatUser {
     avatar?: string;
     isAdmin?: boolean;
     socketId?: string;
-    chatIds?: string[]
+    chatIds?: string[];
+    phoneNumber: string;
 }
 
 export interface IChat {

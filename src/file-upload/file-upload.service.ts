@@ -27,7 +27,7 @@ export class FileUploadService {
       });
     });
     const attachmentData: IMessageAttachment = {
-      attachmentUrl,
+      attachmentUrl: `${process.env.BASE_URL}/${attachmentUrl}`,
       attachmentType: /video/i.test(file.type) ? 'video' : 'audio',
     };
     return attachmentData;

@@ -206,7 +206,6 @@ export class CallGateway
         ? { producerTransportId: transport.id, producerTransport: transport }
         : { consumerTransportId: transport.id, consumerTransport: transport },
     );
-    console.log("sctp state", transport.sctpParameters)
     const res = {
       id: transport?.id,
       iceParameters: transport.iceParameters,
@@ -394,6 +393,7 @@ export class CallGateway
     };
     return ApiResponse.success('consumer created successfully', res, 201);
   }
+
   @SubscribeMessage(ClientEvents.CONSUME_DATA)
   async consomeData(
     client: Socket,
@@ -748,6 +748,7 @@ export class CallGateway
       });
       const producerDto = this.getProducerDTOFromSocket(socketId, room);
       client.to(room).emit(BroadcastEvents.TOGGLE_PRODUCER_STATE, producerDto);
+      
     } catch (error) {
       console.log('Error toggling producermode', error.message);
     }

@@ -8,11 +8,13 @@ import { HttpsOptions } from '@nestjs/common/interfaces/external/https-options.i
 
 
 async function bootstrap() {
-//  const   httpsOptions: HttpsOptions = {
-//   cert: fs.readFileSync(path.join(__dirname, "..", "openssl", "cert.pem")),
-//   key: fs.readFileSync(path.join(__dirname, "..", "openssl", "key.pem"))
-//  };
-  const app = await NestFactory.create(AppModule);
+ const   httpsOptions: HttpsOptions = {
+  cert: fs.readFileSync(path.join(__dirname, "..", "openssl", "cert.pem")),
+  key: fs.readFileSync(path.join(__dirname, "..", "openssl", "key.pem"))
+ };
+  const app = await NestFactory.create(AppModule, 
+    //{httpsOptions}
+  );
   
   app.setGlobalPrefix('api');
   
