@@ -1,4 +1,3 @@
-
 import {
   MessageBody,
   OnGatewayConnection,
@@ -58,14 +57,17 @@ import { IRoomContext } from '../shared/interfaces/room';
 
 import * as path from 'path';
 import { Transaction } from 'typeorm';
-import { DataConsumer, DataConsumerOptions } from 'mediasoup/node/lib/DataConsumer';
+import {
+  DataConsumer,
+  DataConsumerOptions,
+} from 'mediasoup/node/lib/DataConsumer';
 import { Client } from 'socket.io/dist/client';
-import { DataProducer, DataProducerOptions } from 'mediasoup/node/lib/DataProducer';
+import {
+  DataProducer,
+  DataProducerOptions,
+} from 'mediasoup/node/lib/DataProducer';
 import { AidServiceService } from '../aid-service/aid-service.service';
 import { PortRange } from 'mediasoup/node/lib/fbs/transport';
-
-
-
 
 @UseFilters(EventExceptionHandler)
 @UseInterceptors(ResponseInterceptor)
@@ -86,7 +88,7 @@ export class CallGateway
   }
 
   private roomsUsers: { [room: string]: ISocketUser } = {};
-  private roomContexts: { [room: string]: IRoomContext} = {};
+  private roomContexts: { [room: string]: IRoomContext } = {};
 
   private worker: MediaSoup.types.Worker;
   private roomRouters: { [room: string]: IRouterProps } = {};
@@ -102,10 +104,8 @@ export class CallGateway
 
   // private recognizeStream;
 
-
   async afterInit() {
-    try{
-
+    try {
       this.worker = await createWorker();
       this.worker.on('died', () => {
         console.log('worker just died');
@@ -113,28 +113,21 @@ export class CallGateway
       });
       this.roomRouters = {};
       this.roomsUsers = {};
-  
+
       console.log('Gateway started');
-    
-    }catch(error){
-      console.log("Error in AfterInit", error.message)
+    } catch (error) {
+      console.log('Error in AfterInit', error.message);
     }
   }
 
   async handleConnection(client: Socket, ...args: any[]) {
     console.log('connected', client.id);
-    
   }
 
   async handleDisconnect(client: Socket) {
     await this.notifyAndDeleteClosedProducers(client);
-  
-  
-
-    console.log("disconnected socket", client.id);
   }
 
-  
   @SubscribeMessage(ClientEvents.JOIN_ROOM)
   async joinRoom(client: Socket, payload: JoinRoomDTO) {
     const { room, userId, userName, avatar } = payload;
@@ -165,7 +158,7 @@ export class CallGateway
       isAdmin: isOwner,
     });
 
-    this.updateRoomContext(room, {sharerSocketId: ""});
+    this.updateRoomContext(room, { sharerSocketId: '' });
 
     client.join(room);
     return payload;
@@ -190,13 +183,26 @@ export class CallGateway
     payload: createTransportDTO,
   ): Promise<IApiResponse<CreatedTransportDTO>> {
     const { room, isProducer } = payload;
-    const announcedIp = /production/i.test(process.env.NODE_ENV) ? process.env.AWS_PUBLIC_IP : null;
+    const privateIp =  process.env.PRIVATE_IP;
+    const announcedIp = /prod/i.test(process.env.NODE_ENV) ? process.env.PUBLIC_IP : privateIp;
     const transport = await this.roomRouters[room].router.createWebRtcTransport(
       {
-        listenIps: [{ ip: '0.0.0.0', announcedIp }],
+        //listenIps: [{ip: privateIp, announcedIp}],
+        listenInfos: [
+          {
+            protocol: "udp",
+            ip: privateIp,
+            announcedAddress: announcedIp
+          },
+          {
+            protocol: "tcp",
+            ip: privateIp,
+            announcedAddress: announcedIp
+          }
+        ],
         enableUdp: true,
         enableTcp: true,
-        enableSctp: true
+        enableSctp: true,
       },
     );
     this.updateRoomSocketUser(
@@ -211,7 +217,7 @@ export class CallGateway
       iceParameters: transport.iceParameters,
       iceCandidates: transport.iceCandidates,
       dtlsParameters: transport.dtlsParameters,
-      sctpParameters: transport.sctpParameters
+      sctpParameters: transport.sctpParameters,
     };
     return ApiResponse.success('transport created sussessfully', res, 201);
   }
@@ -243,29 +249,27 @@ export class CallGateway
     dto: CreateProducerDTO,
   ): Promise<IApiResponse<{ id: string }>> {
     const { room, rtpParameters, kind } = dto;
-    const { producerTransport } =
-      this.getSocketConnectiondATA(client.id, room);
-      
-      if (producerTransport) {
+    const { producerTransport } = this.getSocketConnectiondATA(client.id, room);
+
+    if (producerTransport) {
       const producer = await producerTransport.produce({ kind, rtpParameters });
       let socketUserPayload: IUserConnectionDetail = {};
       socketUserPayload.isVideoTurnedOff = dto.isVideoTurnedOff;
       socketUserPayload.isAudioTurnedOff = dto.isAudioTurnedOff;
       if (dto.appData?.isScreenShare) {
-        console.log("screen share produced");
+        console.log('screen share produced');
         const roomContext: IRoomContext = {
           screenShareProducer: producer as MediaSoup.types.Producer,
           screenShareProducerId: producer.id,
           isSharing: true,
           sharerSocketId: client.id,
-        }
+        };
         //clean up previouse sharing
         const roomPrevProducer = this.getRoomContext(room)?.screenShareProducer;
         roomPrevProducer?.close();
 
         this.updateRoomContext(room, roomContext);
-      }
-      else if (dto.appData?.mediaKind === "audio") {
+      } else if (dto.appData?.mediaKind === 'audio') {
         socketUserPayload = {
           ...socketUserPayload,
           audiooProducer: producer as MediaSoup.types.Producer,
@@ -273,7 +277,7 @@ export class CallGateway
           isAudioTurnedOff: dto.appData?.isAudioTurnedOff ? true : false,
         };
         this.updateRoomSocketUser(room, client.id, socketUserPayload);
-      } else if (dto.appData?.mediaKind === "video") {
+      } else if (dto.appData?.mediaKind === 'video') {
         socketUserPayload = {
           ...socketUserPayload,
           videoProducer: producer as MediaSoup.types.Producer,
@@ -282,27 +286,28 @@ export class CallGateway
         };
         this.updateRoomSocketUser(room, client.id, socketUserPayload);
       }
-      
+
       const producerDto: IProducerUser = this.getProducerDTOFromSocket(
         client.id,
         room,
       );
-      
-      if(dto.appData?.isScreenShare){
+
+      if (dto.appData?.isScreenShare) {
         const roomContextData = {
           sharerUserName: producerDto?.userName,
           screenShareProducerId: producer.id,
           isSharing: true,
-          sharerSocketId: client.id
-        } as IRoomContext
-      await this.updateRoomContext(room, roomContextData);
-      const updatedRoomContext = await this.getRoomContext(room);
-      client.to(room).emit(BroadcastEvents.SCREEN_SHARING, updatedRoomContext);
+          sharerSocketId: client.id,
+        } as IRoomContext;
+        await this.updateRoomContext(room, roomContextData);
+        const updatedRoomContext = await this.getRoomContext(room);
+        client
+          .to(room)
+          .emit(BroadcastEvents.SCREEN_SHARING, updatedRoomContext);
+      } else {
+        client.to(room).emit(BroadcastEvents.PRODUCER_PRODUCING, producerDto);
       }
-      else {
-    client.to(room).emit(BroadcastEvents.PRODUCER_PRODUCING, producerDto);
-    }  
-    return ApiResponse.success(
+      return ApiResponse.success(
         'producer created successfully',
         { id: producer.id },
         201,
@@ -316,36 +321,40 @@ export class CallGateway
   @SubscribeMessage(ClientEvents.PRODUCE_DATA)
   async produceData(
     client: Socket,
-    dto: CreateDataProducerDTO
-  ): Promise<IApiResponse<unknown>>{
-    try{
+    dto: CreateDataProducerDTO,
+  ): Promise<IApiResponse<unknown>> {
+    try {
       const { room, transportId, ...dataProducerOptions } = dto;
       const socketId = client.id;
-      const { producerTransport } =
-        this.getSocketConnectiondATA(client.id, room);
-    
+      const { producerTransport } = this.getSocketConnectiondATA(
+        client.id,
+        room,
+      );
+
       let dataProducer: DataProducer;
-      if(producerTransport && dto.appData.mediaKind === "data"){
-        dataProducer = await producerTransport.produceData(dataProducerOptions as unknown as DataProducerOptions);
+      if (producerTransport && dto.appData.mediaKind === 'data') {
+        dataProducer = await producerTransport.produceData(
+          dataProducerOptions as unknown as DataProducerOptions,
+        );
         const socketUserPayload = {
           dataProducer: dataProducer as MediaSoup.types.DataProducer,
           dataProducerId: dataProducer.id,
         };
-        
+
         this.updateRoomSocketUser(room, client.id, socketUserPayload);
         const producerDto = await this.getProducerDTOFromSocket(socketId, room);
-        client.to(room).emit(BroadcastEvents.PRODUCER_PRODUCING_DATA, producerDto);
+        client
+          .to(room)
+          .emit(BroadcastEvents.PRODUCER_PRODUCING_DATA, producerDto);
         return ApiResponse.success(
           'producer created successfully',
           { id: dataProducer.id },
           201,
         );
-        
       }
-      return ApiResponse.fail("No Producer transport found", dataProducer);  
-    
-      }catch(error){
-      return ApiResponse.fail(error.message, error)
+      return ApiResponse.fail('No Producer transport found', dataProducer);
+    } catch (error) {
+      return ApiResponse.fail(error.message, error);
     }
   }
 
@@ -360,7 +369,7 @@ export class CallGateway
       rtpCapabilities,
     });
     if (!canConsume) {
-      console.log("can not consume", rtpCapabilities);
+      console.log('can not consume', rtpCapabilities);
       return ApiResponse.fail(
         'something went wrong',
         'Unable to consume the producer',
@@ -400,7 +409,7 @@ export class CallGateway
     dto: CreateConsumerDTO,
   ): Promise<IApiResponse<DataConsumerOptions>> {
     const { room, rtpCapabilities, producerId } = dto;
-    
+
     const { consumerTransport } = this.getSocketConnectiondATA(client.id, room);
     if (!consumerTransport) {
       return ApiResponse.fail(
@@ -415,7 +424,7 @@ export class CallGateway
     });
     this.updateRoomSocketUser(room, client.id, {
       dataConsumer,
-      dataConsumerId: dataConsumer.id
+      dataConsumerId: dataConsumer.id,
     });
 
     const res: DataConsumerOptions = {
@@ -440,7 +449,7 @@ export class CallGateway
         userId,
         isVideoTurnedOff,
         isAudioTurnedOff,
-        dataProducerId
+        dataProducerId,
       } = socketUser;
       const producerId = videoProducerId || audioProducerId;
       if (producerId && client.id !== socketId) {
@@ -451,7 +460,7 @@ export class CallGateway
           socketId,
           isVideoTurnedOff,
           isAudioTurnedOff,
-          dataProducerId
+          dataProducerId,
         };
       }
     });
@@ -465,7 +474,7 @@ export class CallGateway
   async getRoomAdmins(
     client: Socket,
     payload: { room: string },
-  ): Promise<IApiResponse<{[socketId: string]: IProducerUser}>> {
+  ): Promise<IApiResponse<{ [socketId: string]: IProducerUser }>> {
     const roomSockets = this.roomsUsers[payload.room];
     if (!roomSockets) {
       const room = await this.roomService.getRoom(payload.room);
@@ -571,7 +580,7 @@ export class CallGateway
     payload: PublishProducerDTO,
   ): Promise<IApiResponse<unknown>> {
     try {
-      const { socketId} = payload;
+      const { socketId } = payload;
       client.to(socketId).emit(BroadcastEvents.LEAVE_ROOM, payload);
       return ApiResponse.success('remove room triggered successfully', payload);
     } catch (errror) {
@@ -592,26 +601,33 @@ export class CallGateway
         [action]: actionState,
       });
       const producerDto = this.getProducerDTOFromSocket(socketId, room);
-      client.to(room).emit(BroadcastEvents.USER_REACTION, {...producerDto, ...payload});
-      return (producerDto)
+      client
+        .to(room)
+        .emit(BroadcastEvents.USER_REACTION, { ...producerDto, ...payload });
+      return producerDto;
     } catch (error) {
       console.log('Error toggling producermode', error.message);
-      return ApiResponse.fail("error handling user reaction", error.message)
+      return ApiResponse.fail('error handling user reaction', error.message);
     }
   }
 
   @SubscribeMessage(BroadcastEvents.ROOM_CONTEXT_MODIFICATION)
-  async roomContextModification(
-    client: Socket,
-    payload: IRoomContext
-  ){
-    try{
-      const {room} = payload;
+  async roomContextModification(client: Socket, payload: IRoomContext) {
+    try {
+      const { room } = payload;
       this.updateRoomContext(room, payload);
-      const roomContet = this.getRoomContext(room)
-      this.server.to(room).emit(BroadcastEvents.ROOM_CONTEXT_MODIFICATION, {...roomContet, payload});
-      return ApiResponse.success("Room context modified successfullly", roomContet);
-    }catch(error){
+      const roomContet = this.getRoomContext(room);
+      this.server
+        .to(room)
+        .emit(BroadcastEvents.ROOM_CONTEXT_MODIFICATION, {
+          ...roomContet,
+          payload,
+        });
+      return ApiResponse.success(
+        'Room context modified successfullly',
+        roomContet,
+      );
+    } catch (error) {
       console.log(this.roomContextModification.name, error.message);
       return ApiResponse.fail(error.message, error);
     }
@@ -623,33 +639,42 @@ export class CallGateway
       room: string;
       socketId?: string;
       accessibilityPreferences: IAccessibilityPreferences;
-    }
-  ){
-    try{
-      const {room} = payload;
+    },
+  ) {
+    try {
+      const { room } = payload;
       const socketId = payload.socketId || client.id;
       payload.socketId = socketId;
 
       const roomUsers = this.roomsUsers[room];
       const admin = Object.values(roomUsers || {}).find((user) => user.isAdmin);
       const producerDto = await this.getProducerDTOFromSocket(socketId, room);
-      client.to(admin.socketId).emit(BroadcastEvents.REQUEST_ACCESSIBLITY_PREFERENCE, {payload, ...producerDto});
-      return ApiResponse.success("Request for accessibility preference made successfullly", producerDto);
-    }catch(error){
+      client
+        .to(admin.socketId)
+        .emit(BroadcastEvents.REQUEST_ACCESSIBLITY_PREFERENCE, {
+          payload,
+          ...producerDto,
+        });
+      return ApiResponse.success(
+        'Request for accessibility preference made successfullly',
+        producerDto,
+      );
+    } catch (error) {
       console.log(this.requestAccessibiltyPreference.name, error.message);
       return ApiResponse.fail(error.message, error);
     }
   }
 
-  
   @SubscribeMessage(BroadcastEvents.REQUEST_FOR_AID_PERSONNEL)
   async requestAidPersonnel(
     client: Socket,
     payload: RequestAidDTO,
   ): Promise<IApiResponse<unknown>> {
     try {
-      
-      return ApiResponse.success('Request for aid personnel triggered successfully', payload);
+      return ApiResponse.success(
+        'Request for aid personnel triggered successfully',
+        payload,
+      );
     } catch (errror) {
       return ApiResponse.fail(
         (error as any).message,
@@ -657,64 +682,86 @@ export class CallGateway
       );
     }
   }
-  
+
   @SubscribeMessage(BroadcastEvents.ACCESSIBLITY_PREFERENCE_ACCEPTANCE)
   async accessibiltyPreferenceAcceptance(
     client: Socket,
-    payload: AccessibilityPreferenceDTO
-  ){
-    try{
-      const {room} = payload;
+    payload: AccessibilityPreferenceDTO,
+  ) {
+    try {
+      const { room } = payload;
       const socketId = payload.socketId || client.id;
-      await this.updateRoomSocketUser(room, socketId, payload.accessibilityPreferences)
+      await this.updateRoomSocketUser(
+        room,
+        socketId,
+        payload.accessibilityPreferences,
+      );
       const producerDto = await this.getProducerDTOFromSocket(client.id, room);
-      client.to(socketId).emit(BroadcastEvents.ACCESSIBLITY_PREFERENCE_ACCEPTANCE, {...producerDto, payload});
-      return ApiResponse.success("Accessibility preferce set successfullly", producerDto);
-    }catch(error){
-      console.log("request for accessibilty preferene acceptance", error.message);
+      client
+        .to(socketId)
+        .emit(BroadcastEvents.ACCESSIBLITY_PREFERENCE_ACCEPTANCE, {
+          ...producerDto,
+          payload,
+        });
+      return ApiResponse.success(
+        'Accessibility preferce set successfullly',
+        producerDto,
+      );
+    } catch (error) {
+      console.log(
+        'request for accessibilty preferene acceptance',
+        error.message,
+      );
       return ApiResponse.fail(error.message, error);
     }
   }
-  
-  
+
   @SubscribeMessage(BroadcastEvents.ACCESSIBLITY_PREFERENCE_REJECTION)
   async accessibiltyPreferenceRejection(
     client: Socket,
-    payload:  AccessibilityPreferenceDTO
-  ){
-    try{
-      const {room} = payload;
+    payload: AccessibilityPreferenceDTO,
+  ) {
+    try {
+      const { room } = payload;
       const socketId = payload.socketId || client.id;
       const producerDto = await this.getProducerDTOFromSocket(client.id, room);
-      client.to(socketId).emit(BroadcastEvents.ACCESSIBLITY_PREFERENCE_REJECTION, {...producerDto, payload});
-      return ApiResponse.success("Accessibility preferce rejected successfullly", producerDto);
-    }catch(error){
-      console.log("accessibility request rejection", error.message);
+      client
+        .to(socketId)
+        .emit(BroadcastEvents.ACCESSIBLITY_PREFERENCE_REJECTION, {
+          ...producerDto,
+          payload,
+        });
+      return ApiResponse.success(
+        'Accessibility preferce rejected successfullly',
+        producerDto,
+      );
+    } catch (error) {
+      console.log('accessibility request rejection', error.message);
       return ApiResponse.fail(error.message, error);
     }
   }
-  
- 
+
   @SubscribeMessage(BroadcastEvents.CHAT_MESSAGE)
-  async chatMessage(
-    client: Socket,
-    payload: ChatMessageDTO
-  ){
-    try{
+  async chatMessage(client: Socket, payload: ChatMessageDTO) {
+    try {
       const socketId = payload.socketId || client.id;
       payload.socketId = socketId;
-      const producerDto = await this.getProducerDTOFromSocket(socketId, payload.room);
+      const producerDto = await this.getProducerDTOFromSocket(
+        socketId,
+        payload.room,
+      );
       payload.usesTextualCommunication = producerDto?.usesTextualCommunication;
-      console.log("payload for chat", payload)
-      
-      this.server.to(payload.room).emit(BroadcastEvents.CHAT_MESSAGE, {...producerDto, payload})
-      return ApiResponse.success("chat sent", payload);
-    }catch(error){
-      console.log("Error handling chat message", error.message);
-      return ApiResponse.fail("Error handling message", error);
+      console.log('payload for chat', payload);
+
+      this.server
+        .to(payload.room)
+        .emit(BroadcastEvents.CHAT_MESSAGE, { ...producerDto, payload });
+      return ApiResponse.success('chat sent', payload);
+    } catch (error) {
+      console.log('Error handling chat message', error.message);
+      return ApiResponse.fail('Error handling message', error);
     }
   }
-  
 
   @SubscribeMessage(BroadcastEvents.TOGGLE_PRODUCER_STATE)
   async toggleProducerState(client: Socket, payload: ToggleProducerStateDTO) {
@@ -748,59 +795,65 @@ export class CallGateway
       });
       const producerDto = this.getProducerDTOFromSocket(socketId, room);
       client.to(room).emit(BroadcastEvents.TOGGLE_PRODUCER_STATE, producerDto);
-      
     } catch (error) {
       console.log('Error toggling producermode', error.message);
     }
   }
 
   @SubscribeMessage(BroadcastEvents.GET_ROOM_CONTEXT)
-  async getRoomContextData(
-    client: Socket,
-    payload: {room: string}
-  ){
+  async getRoomContextData(client: Socket, payload: { room: string }) {
     return this.getRoomContext(payload.room);
   }
   @SubscribeMessage(BroadcastEvents.SCREEN_SHARING_STOPPED)
-  async screenSharingStopped(
-    client: Socket,
-    payload: CloseMediaDTO
-  ){
-   try{
-    const socketId = payload.socketId || client.id;
-    const roomContet = this.getRoomContext(payload.room);
-    if(roomContet?.sharerSocketId !== socketId) return;
-    client.to(payload.room).emit(BroadcastEvents.SCREEN_SHARING_STOPPED, {sharerSocketId: socketId, sharerUserName: roomContet.sharerUserName, isSharing: false} as IRoomContext)
-    console.log("stopped fired")
-    const roomProducer = roomContet?.screenShareProducer;
-    roomProducer?.close();
-    this.updateRoomContext(payload.room, {sharerSocketId: "", isSharing: false, screenShareProducer: null, screenShareProducerId: ""})
-    
-   }catch(error){
-    console.log("Error stoppng screen share", error.message);
-   } 
+  async screenSharingStopped(client: Socket, payload: CloseMediaDTO) {
+    try {
+      const socketId = payload.socketId || client.id;
+      const roomContet = this.getRoomContext(payload.room);
+      if (roomContet?.sharerSocketId !== socketId) return;
+      client
+        .to(payload.room)
+        .emit(BroadcastEvents.SCREEN_SHARING_STOPPED, {
+          sharerSocketId: socketId,
+          sharerUserName: roomContet.sharerUserName,
+          isSharing: false,
+        } as IRoomContext);
+      console.log('stopped fired');
+      const roomProducer = roomContet?.screenShareProducer;
+      roomProducer?.close();
+      this.updateRoomContext(payload.room, {
+        sharerSocketId: '',
+        isSharing: false,
+        screenShareProducer: null,
+        screenShareProducerId: '',
+      });
+    } catch (error) {
+      console.log('Error stoppng screen share', error.message);
+    }
   }
   @SubscribeMessage(BroadcastEvents.PRODUCER_CLOSED)
   async producerClosed(client: Socket, payload: CloseMediaDTO) {
-    try{
+    try {
       const socketId = payload.socketId || client.id;
       const socketUser = (this.roomsUsers[payload.room] || {})[socketId];
-      if(payload.mediaKind === "audio") {
+      if (payload.mediaKind === 'audio') {
         socketUser?.audiooProducer?.close();
-        this.updateRoomSocketUser(payload.room, socketId, {isAudioTurnedOff: false})
-      }
-      else if(payload.mediaKind === "video") {
+        this.updateRoomSocketUser(payload.room, socketId, {
+          isAudioTurnedOff: false,
+        });
+      } else if (payload.mediaKind === 'video') {
         socketUser?.videoProducer?.close();
-        this.updateRoomSocketUser(payload.room, socketId, {isVideoTurnedOff: false})
+        this.updateRoomSocketUser(payload.room, socketId, {
+          isVideoTurnedOff: false,
+        });
       }
       const producerDto = this.getProducerDTOFromSocket(socketId, payload.room);
-      client.to(payload.room).emit(BroadcastEvents.PRODUCER_PRODUCING, producerDto);
-    
-    }catch(error){
-      console.log("Error closing producer", error.message);
+      client
+        .to(payload.room)
+        .emit(BroadcastEvents.PRODUCER_PRODUCING, producerDto);
+    } catch (error) {
+      console.log('Error closing producer', error.message);
     }
   }
-
 
   private updateRoomSocketUser(
     room: string,
@@ -828,61 +881,73 @@ export class CallGateway
     return this.roomsUsers[room] ? this.roomsUsers[room][socketId] : {};
   }
 
- async notifyAndDeleteClosedProducers(client: Socket) {
-    try{
+  async notifyAndDeleteClosedProducers(client: Socket) {
+    try {
       if (this.roomsUsers) {
-        const connectedSockets = Object.values(this.roomsUsers)
-        let socketUser: IUserConnectionDetail = connectedSockets.find((socketData) =>  socketData[client.id])
+        const connectedSockets = Object.values(this.roomsUsers);
+        let socketUser: IUserConnectionDetail = connectedSockets.find(
+          (socketData) => socketData[client.id],
+        );
         socketUser = socketUser[client.id];
         socketUser?.audiooProducer?.close();
         socketUser?.videoProducer?.close();
         const roomContext = this.getRoomContext(socketUser?.room);
-        if(roomContext && roomContext?.sharerSocketId === client.id) {
+        if (roomContext && roomContext?.sharerSocketId === client.id) {
           const dto: CloseMediaDTO = {
             socketId: client.id,
             isScreenSharing: true,
             room: socketUser?.room,
-            mediaKind: "video"
-          }
-        
+            mediaKind: 'video',
+          };
+
           await this.screenSharingStopped(client, dto);
         }
 
-        if(roomContext && roomContext?.specialPresenterSocketId === client.id) {
+        if (
+          roomContext &&
+          roomContext?.specialPresenterSocketId === client.id
+        ) {
           const roomContextData: IRoomContext = {
             hasSpecialPresenter: false,
             specialPresenterSocketId: undefined,
-            room: socketUser?.room
+            room: socketUser?.room,
           } as IRoomContext;
           await this.roomContextModification(client, roomContextData);
         }
-        const producerDto = this.getProducerDTOFromSocket(client.id, socketUser?.room);
-          console.log("closed producer", producerDto)
-          client.to(socketUser?.room).emit(BroadcastEvents.PRODUCER_CLOSED, producerDto);
-          
+        const producerDto = this.getProducerDTOFromSocket(
+          client.id,
+          socketUser?.room,
+        );
+        client
+          .to(socketUser?.room)
+          .emit(BroadcastEvents.PRODUCER_CLOSED, producerDto);
 
         delete this.roomsUsers[socketUser?.room][client.id];
       }
-    
-    }catch(error){
-      console.log("Error while disconnecting", error.message);
+    } catch (error) {
+      console.log('Error while disconnecting', error.message);
     }
   }
 
   getProducerDTOFromSocket(socketId: string, room: string): IProducerUser {
-    const socketUser =  (this.roomsUsers[room] || {})[socketId];
-    const {audiooProducer, videoProducer, producerTransport, consumer, consumerTransport, ...producerDto} = (socketUser || {});
+    const socketUser = (this.roomsUsers[room] || {})[socketId];
+    const {
+      audiooProducer,
+      videoProducer,
+      producerTransport,
+      consumer,
+      consumerTransport,
+      ...producerDto
+    } = socketUser || {};
     return producerDto;
-   
   }
-  
+
   getRoomContext(room: string): IRoomContext {
     return this.roomContexts[room];
   }
 
   updateRoomContext(room: string, dto: IRoomContext) {
     const roomContext = this.roomContexts[room] || {};
-    this.roomContexts[room] = {...roomContext, ...dto};
+    this.roomContexts[room] = { ...roomContext, ...dto };
   }
-
 }

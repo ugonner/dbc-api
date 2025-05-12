@@ -37,8 +37,8 @@ jobs:
 
           
           # Install dependencies from package-lock.json
-          sudo npm ci
-          sudo npm i -S mediasoup@3.14
+          sudo npm i -S mediasoup@3.14.8
+          sudo npm i
           sudo npm run build
 
           # Restart the application using PM2
