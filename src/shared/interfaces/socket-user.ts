@@ -5,9 +5,9 @@ export interface IUserConnectionDetail extends IProducerUser  {
   room?: string;
   producerTransport?: MediaSoup.types.Transport;
   consumerTransport?: MediaSoup.types.Transport;
+  consumers?: MediaSoup.types.Consumer[];
   producerTransportId?: string;
   consumerTransportId?: string;
-  consumerId?: string;
   videoProducerId?: string;
   audioProducerId?: string;
   dataProducerId?: string;

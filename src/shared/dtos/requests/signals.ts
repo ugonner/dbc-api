@@ -115,6 +115,13 @@ export class AccessibilityPreferenceDTO {
     roomAidType: RoomAidType;
     room: string;
   }
+
+  export interface IConsumerReadyDTO {
+    socketId: string;
+    room: string;
+    producerId: string;
+    consumerId: string;
+  }
   
 
 

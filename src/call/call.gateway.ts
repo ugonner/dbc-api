@@ -20,6 +20,7 @@ import {
   CreateProducerDTO,
   createTransportDTO,
   getRouterRTCCapabilitiesDTO,
+  IConsumerReadyDTO,
   JoinRoomDTO,
   PublishProducerDTO,
   RequestAidDTO,
@@ -43,6 +44,7 @@ import {
 import { IRouterProps } from '../shared/interfaces/router';
 import {
   forwardRef,
+  HttpStatus,
   Inject,
   Injectable,
   UseFilters,
@@ -156,6 +158,7 @@ export class CallGateway
       socketId,
       isOwner,
       isAdmin: isOwner,
+      consumers: []
     });
 
     this.updateRoomContext(room, { sharerSocketId: '' });
@@ -233,7 +236,7 @@ export class CallGateway
     const socketId = client.id;
 
     const { consumerTransport, producerTransport } =
-      this.getSocketConnectiondATA(socketId, room);
+      this.getSocketUserConnectionDetail(socketId, room);
 
     const transport = isProducer ? producerTransport : consumerTransport;
     if (!transport) {
@@ -248,14 +251,13 @@ export class CallGateway
     client: Socket,
     dto: CreateProducerDTO,
   ): Promise<IApiResponse<{ id: string }>> {
-    const { room, rtpParameters, kind } = dto;
-    const { producerTransport } = this.getSocketConnectiondATA(client.id, room);
+    const { room, rtpParameters, kind, ...dtoRest } = dto;
+    const { producerTransport } = this.getSocketUserConnectionDetail(client.id, room);
 
     if (producerTransport) {
-      const producer = await producerTransport.produce({ kind, rtpParameters });
+      const producer = await producerTransport.produce({ kind, rtpParameters, paused: true });
       let socketUserPayload: IUserConnectionDetail = {};
-      socketUserPayload.isVideoTurnedOff = dto.isVideoTurnedOff;
-      socketUserPayload.isAudioTurnedOff = dto.isAudioTurnedOff;
+      
       if (dto.appData?.isScreenShare) {
         console.log('screen share produced');
         const roomContext: IRoomContext = {
@@ -291,16 +293,10 @@ export class CallGateway
         client.id,
         room,
       );
+     
 
       if (dto.appData?.isScreenShare) {
-        const roomContextData = {
-          sharerUserName: producerDto?.userName,
-          screenShareProducerId: producer.id,
-          isSharing: true,
-          sharerSocketId: client.id,
-        } as IRoomContext;
-        await this.updateRoomContext(room, roomContextData);
-        const updatedRoomContext = await this.getRoomContext(room);
+         const updatedRoomContext = await this.getRoomContext(room);
         client
           .to(room)
           .emit(BroadcastEvents.SCREEN_SHARING, updatedRoomContext);
@@ -326,7 +322,7 @@ export class CallGateway
     try {
       const { room, transportId, ...dataProducerOptions } = dto;
       const socketId = client.id;
-      const { producerTransport } = this.getSocketConnectiondATA(
+      const { producerTransport } = this.getSocketUserConnectionDetail(
         client.id,
         room,
       );
@@ -376,7 +372,7 @@ export class CallGateway
       ) as unknown as IApiResponse<CreatedConsumerDTO>;
     }
 
-    const { consumerTransport } = this.getSocketConnectiondATA(client.id, room);
+    const { consumerTransport } = this.getSocketUserConnectionDetail(client.id, room);
     if (!consumerTransport) {
       return ApiResponse.fail(
         'No consumer transport found at server',
@@ -388,10 +384,13 @@ export class CallGateway
     const consumer = await consumerTransport.consume({
       producerId,
       rtpCapabilities,
+      paused: true
     });
+    const userConnectionDetail = await this.getSocketUserConnectionDetail(client.id, room);
+    const consumers = (userConnectionDetail.consumers || []);
+    consumers.push(consumer);
     this.updateRoomSocketUser(room, client.id, {
-      consumer,
-      consumerId: consumer.id,
+      consumers,
     });
 
     const res = {
@@ -410,7 +409,7 @@ export class CallGateway
   ): Promise<IApiResponse<DataConsumerOptions>> {
     const { room, rtpCapabilities, producerId } = dto;
 
-    const { consumerTransport } = this.getSocketConnectiondATA(client.id, room);
+    const { consumerTransport } = this.getSocketUserConnectionDetail(client.id, room);
     if (!consumerTransport) {
       return ApiResponse.fail(
         'No consumer transport found at server',
@@ -433,6 +432,30 @@ export class CallGateway
     return ApiResponse.success('Data consumer created successfully', res, 201);
   }
 
+  @SubscribeMessage(BroadcastEvents.CONSUMER_READY)
+  async consumerReady(
+    client: Socket,
+    payload: IConsumerReadyDTO
+  ): Promise<IApiResponse<unknown>> {
+    try{
+      const {producerId, room, socketId, consumerId} = payload;
+
+    const roomSockets = this.roomsUsers[room];
+    const roomUsers: IUserConnectionDetail[] = Object.values(roomSockets || {});
+    const producingUser = roomUsers.find((user) => user.audioProducerId === producerId || user.videoProducerId === producerId);
+      
+    if((!producingUser?.isVideoTurnedOff) && producingUser?.videoProducer?.paused) await producingUser?.videoProducer?.resume();
+    if((!producingUser?.isAudioTurnedOff) && producingUser?.audiooProducer?.paused) await producingUser?.audiooProducer?.resume()
+     
+      const consumingUser = roomSockets[socketId || client.id];
+      await consumingUser?.consumers?.find((consumer) => consumer.id == consumerId)?.resume();
+
+      return ApiResponse.success("consumer ready handled successfully", payload);
+    }catch(error){
+      console.log("Error handling consumer ready ", error.message);
+      return ApiResponse.fail(error.message, HttpStatus.BAD_REQUEST)
+    }
+  }
   @SubscribeMessage(ClientEvents.GET_ROOM_PRODUCERS)
   async getRoomProducers(
     client: Socket,
@@ -874,7 +897,7 @@ export class CallGateway
     else this.roomRouters[room] = { router };
   }
 
-  private getSocketConnectiondATA(
+  private getSocketUserConnectionDetail(
     socketId: string,
     room: string,
   ): IUserConnectionDetail {
@@ -944,6 +967,12 @@ export class CallGateway
 
   getRoomContext(room: string): IRoomContext {
     return this.roomContexts[room];
+  }
+
+  
+  getUserDetailFromSocketId(socketId: string, room: string): IUserConnectionDetail {
+    const socketUser = (this.roomsUsers[room] || {})[socketId];
+    return socketUser;
   }
 
   updateRoomContext(room: string, dto: IRoomContext) {
