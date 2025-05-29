@@ -70,6 +70,7 @@ import {
 } from 'mediasoup/node/lib/DataProducer';
 import { AidServiceService } from '../aid-service/aid-service.service';
 import { PortRange } from 'mediasoup/node/lib/fbs/transport';
+import { channel } from 'diagnostics_channel';
 
 @UseFilters(EventExceptionHandler)
 @UseInterceptors(ResponseInterceptor)
@@ -408,7 +409,7 @@ export class CallGateway
     dto: CreateConsumerDTO,
   ): Promise<IApiResponse<DataConsumerOptions>> {
     const { room, rtpCapabilities, producerId } = dto;
-
+   
     const { consumerTransport } = this.getSocketUserConnectionDetail(client.id, room);
     if (!consumerTransport) {
       return ApiResponse.fail(
@@ -425,11 +426,15 @@ export class CallGateway
       dataConsumer,
       dataConsumerId: dataConsumer.id,
     });
+    
 
-    const res: DataConsumerOptions = {
+    const res: unknown = {
+      id: dataConsumer.id,
       dataProducerId: producerId,
-    };
-    return ApiResponse.success('Data consumer created successfully', res, 201);
+    sctpStreamParameters: dataConsumer.sctpStreamParameters,
+    protocol: dataConsumer.protocol,
+  };
+    return ApiResponse.success('Data consumer created successfully', res as DataConsumerOptions, 201);
   }
 
   @SubscribeMessage(BroadcastEvents.CONSUMER_READY)
@@ -773,13 +778,15 @@ export class CallGateway
         socketId,
         payload.room,
       );
+      
       payload.usesTextualCommunication = producerDto?.usesTextualCommunication;
       console.log('payload for chat', payload);
 
       this.server
         .to(payload.room)
         .emit(BroadcastEvents.CHAT_MESSAGE, { ...producerDto, payload });
-      return ApiResponse.success('chat sent', payload);
+      
+        return ApiResponse.success('chat sent', payload);
     } catch (error) {
       console.log('Error handling chat message', error.message);
       return ApiResponse.fail('Error handling message', error);
@@ -955,6 +962,7 @@ export class CallGateway
   getProducerDTOFromSocket(socketId: string, room: string): IProducerUser {
     const socketUser = (this.roomsUsers[room] || {})[socketId];
     const {
+      dataProducer,
       audiooProducer,
       videoProducer,
       producerTransport,
