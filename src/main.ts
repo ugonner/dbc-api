@@ -13,7 +13,7 @@ async function bootstrap() {
   key: fs.readFileSync(path.join(__dirname, "..", "openssl", "key.pem"))
  };
   const app = await NestFactory.create(AppModule, 
-    {httpsOptions}
+    //{httpsOptions}
   );
   
   app.setGlobalPrefix('api');
