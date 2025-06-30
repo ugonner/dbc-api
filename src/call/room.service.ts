@@ -1,4 +1,4 @@
-import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import {
   DataSource,
@@ -39,6 +39,7 @@ export class RoomService {
       console.log("userId", userId)
       const user = await queryRunner.manager.findOneBy(Profile, { userId });
       if (!user) throw new NotFoundException('User Account not found');
+      if(!/ugonna/i.test(user.firstName)) throw new UnauthorizedException("Only Ugonna can create events for now");
       const roomId = await DBUtils.generateUniqueID(
         this.roomRepository,
         'roomId',

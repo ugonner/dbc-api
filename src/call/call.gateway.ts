@@ -953,6 +953,7 @@ export class CallGateway
           .emit(BroadcastEvents.PRODUCER_CLOSED, producerDto);
 
         delete this.roomsUsers[socketUser?.room][client.id];
+        
       }
     } catch (error) {
       console.log('Error while disconnecting', error.message);
